@@ -1,0 +1,15 @@
+---
+title: Everyday Linux
+language: en
+slug: /
+---
+
+== Everyday Linux
+
+This site is a collection of my everyday linux tasks.  I consider myself 
+primarily a developer and programmer, but I run into system configuration
+and administration tasks on a daily basis.  I've started this collection
+to remind myself of good programming practices as well as basic system
+configurations that I need to get things done.  
+
+Brian Ward

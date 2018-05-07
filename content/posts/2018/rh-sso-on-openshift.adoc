@@ -1,0 +1,38 @@
+---
+title: RH-SSO Authentication on Openshift Federated to Google by Hosted Domain
+date: 2018-05-03T16:42:00-04:00
+categories: ["openshift"]
+tags: ["google", "rh-sso","keycloak","ansible","authentication","authorization"]
+language: en
+slug: rh-sso-on-openshift
+---
+
+== RH-SSO Authentication on Openshift Federated to Google by Hosted Domain
+
+[standalone@localhost:9990 /] /subsystem=logging/logger=org.keycloak:add
+{"outcome" => "success"}
+[standalone@localhost:9990 /] /subsystem=logging/logger=org.keycloak:write-attribute(name=level,value=DEBUG)
+{"outcome" => "success"}
+[standalone@localhost:9990 /] /subsystem=logging/logger=org.keycloak:read-resource(recursive=true)
+{
+    "outcome" => "success",
+    "result" => {
+        "category" => "org.keycloak",
+        "filter" => undefined,
+        "filter-spec" => undefined,
+        "handlers" => undefined,
+        "level" => "DEBUG",
+        "use-parent-handlers" => true
+    }
+}
+
+
+http: TLS handshake error from 10.128.2.25:49612: remote error: tls: bad certificate
+
+
+https://lists.openshift.redhat.com/openshift-archives/users/2016-May/msg00130.html
+https://docs.openshift.com/container-platform/3.7/admin_solutions/user_role_mgmt.html#determine-default-user-roles
+https://sso.apps.opencontainer.io/auth/admin
+https://developers.google.com/identity/protocols/OpenIDConnect
+https://console.cloud.google.com/apis/credentials?project=sso-opencontainer&authuser=1&organizationId=54643501348
+https://docs.openshift.com/container-platform/3.7/admin_solutions/master_node_config.html

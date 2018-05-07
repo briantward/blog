@@ -1,0 +1,73 @@
+---
+title: Bridged Host-VM Network
+date: 2018-05-01T08:27:00-04:00
+categories: ["networking"]
+tags: ["bridge", "virtual","machine"]
+language: en
+slug: bridge-host-vm
+---
+
+== Bridged Host-VM Network
+
+Setup a bridged network connection on RHEL 7.5 using Network Manager so that a VM
+can reside on the same network as the host.
+
+e.g.
+
+host 192.168.1.10
+vm1 192.168.1.20
+vm2 192.168.1.21
+...
+vm1 and vm2 will use the bridge from the host to reach the DHCP server 192.168.1.1
+
+
+I had figured this out before on previous versions of RHEL, but after doing an update to 7.5
+my network connections got reset.  Alas, after much trial and error wasted time, I decided
+to write down the process this time.  I am not a network technician, but I remember enough from
+time to time when I need to set up something particular like this.
+
+Other sites had information about setting this up with network instead of NetworkManager.
+https://askubuntu.com/questions/551680/how-to-do-virtual-networking-all-types-in-virt-manager
+http://blog.bodhizazen.com/linux/virt-manager-bridged-networking/
+https://www.centos.org/forums/viewtopic.php?t=8284
+
+Here are two videos demonstrating this gist of this tutorial in fedora, from another author.
+ - https://www.youtube.com/watch?v=rSxK_08LSZw
+ - https://www.youtube.com/watch?v=TGXz94id-AM
+ Note that the GNOME NetworkManager GUI (what is correct name?) for this version (?) of fedora is different as
+ of fedora26 and RHEL 7.5.  In the latter versions, the ability to create a bridge
+ from the User Profile Network Manager (top right of your screen) is removed.  You
+ can use any of the three examples below instead.
+
+
+There are several ways this can be accomplished.  Sysadmins from pre-NetworkManager
+will be comfortable with the scripts in ``/etc/sysconfig/network-scripts`` as they
+are similar to those found in ``/etc/init.d/network-scripts``
+
+1. nmcli
+
+2. nmtui
+
+3. nm-connection-editor
+
+15 char limit for device name
+
+DO NOT use the virt-manager tool for creating bridged connections.
+Virt-Manager
+Edit > Connection Details
+
+"Virtual Networks" Tab is somewhat misleading.  You can create an isolated private
+network for just your VMs.  This could be advantageous if you wanted to create a whole
+separate subnet just for your vms.  All of them would be addressable through a NAT on
+your host machine.  I did not want that.
+
+Another alternative:
+- https://www.youtube.com/watch?v=8LnghnDv0LY (this one creates a routed private network)
+
+I ran into this problem:
+
+https://unix.stackexchange.com/questions/362915/how-to-remove-a-vnet0-interface
+
+The vnet0 interface was actually brought up by virt-manager (virsh/kvm/quemu) specifically for this bridged connection.
+I deleted all network connections, then rebuilt the bridge.  Upon restarting NetworkManager and then restarting
+libvirt (and all vms), vnet0 reappeared automatically and the bridge connection worked correctly.

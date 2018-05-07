@@ -1,0 +1,72 @@
+---
+title: Split DNS Resolution with VPN DNS and Local DNS
+date: 2018-05-01T10:40:00-04:00
+categories: ["networking"]
+tags: ["dns", "vpn","dnsmasq"]
+language: en
+slug: split-dns-vpn-local-dnsmasq
+---
+
+== Split DNS Resolution with VPN DNS and Local DNS
+
+I recently installed a local identity management server with Red Hat
+Identity Management.  This is essentially a free-ipa server that hosts
+some certificate management, DNS, and LDAP to track both my machines and
+my users on my local network.  I don't have a whole lot of users, but I 
+would like to have my username and passwords synced over the network.
+
+You can take a look at another article on how I set that up.  The result was that I now have a local DNS server that my router/gateway/DHCP defaults to using.  This allows my computers to reach each other by hostnames.  
+
+However, I have an issue on my work laptop.  When I connect to my work VPN, 
+by default it overrides my local DNS resolution.  When that happens, I can no 
+longer get to systems on my local network.  That defeats the whole purpose of 
+providing a local DNS and identity management solution, especially when my 
+laptop is my primary work machine.
+
+The first solution I attempted did not work.  I thought, what if I somehow 
+make my VPN connection stop applying its DNS override?  If I do that, I need 
+my own local DNS to resolve the internal company hostnames when needed.  After
+all, that's the whole purpose of the VPN DNS -- to provide hostname resolution
+to internal network machines that are not available to the outside world.  My
+answer to that was to add my company VPN DNS to a list of forwarded addresses by zone in the DNS server.  That did not work at all.  Then I decided to try adding the company VPN DNS to a list of globally forwarded addresses in the DNS server.  That worked but not completely.  The problem is that my local DNS machine would have to access the DNS server on the VPN itself to provide correct resolutions.  That wasn't a scenario I wanted.  I would have to permanently bridge my company VPN to my local network.  
+
+My final solution was to use a local dns server on my laptop --  a simplified one using dnsmasq.  It's not a traditional bind dns server, but rather it is a flexible dns server that allows me to make fine-grained resolution in certain scenarios.  Below are the steps to acheive what I needed:
+
+1. Change my ethernet and wifi default DNS to my localhost, i.e. 127.0.0.1, as this is where my dnsmasq server will be running.
+
+2. Update /etc/dnsmasq.conf with the following changes:
+
+  [source]
+  ----
+  domain-needed # anything without dots in it doesn't get forwarded to DNS
+  no-resolv # don't use /etc/resolv.conf, specifically because it this service is providing the resolution found in that file and it would be a recursive loop
+  server=8.8.8.8 # google DNS, the primary external DNS forwarding, because everyone loves google
+  server=/home.mydomain.com/192.168.1.1 # my home domain and my home DNS server
+  server=/vpn.mycompany.com/8.8.8.8 # use the exernal DNS specifically for the VPN host so we can find it before the VPN is connected
+  server=/mycompany.com/10.10.1.1 # the internal VPN DNS
+  server=/mycompany.com/8.8.8.8 # again, the external DNS, for those times when we are not connected to the VPN
+  interface=lo # only use the lo interace
+  listen-address=127.0.0.1 # only bind to the localhost IP
+  no-dhcp-interface=lo # specifically do not provide any other service than DNS
+  bind-interfaces # only bind to the interface(s) I just listed above (default to bind to all interfaces even though you specified only one above)
+  ----
+
+3. Update my VPN settings.  My VPN is being provided by openVPN.  Other providers will inevitably work differently.  I basically needed a way to instruct my VPN connection NOT to add its DNS servers to my /etc/resolv.conf file.  Actually, I did not acheive exactly that solution, but I did find something that worked.  The remote VPN server is responsible for pushing two DNS host IPs to my /etc/resolv.conf.  Locally, OpenVPN allows you to add a DNS host IP in the configuration file as well.  Actually, I didn't need to do that.  However, you can also set the priority on your VPN DNS entries such that the two entries provided by the remote server appear below your existing DNS entry in /etc/resolv.conf.  It looks like this:
+
+  /etc/NetworkManager/system-connections/MYVPN.ovpn
+  
+  [source]
+  ----
+  [ipv4]
+  dns-priority=1000
+  dns-search=
+  method=auto
+  never-default=true
+  ----
+
+  Follow that with a simple reload command:
+  
+  [source]
+  ----
+  nmcli c reload MYVPN
+  ----
