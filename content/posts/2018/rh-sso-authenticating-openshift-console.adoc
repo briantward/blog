@@ -1,0 +1,20 @@
+---
+title: Authenticate Openshift Console with RH-SSO 
+date: 2018-05-09T12:00:00-04:00
+categories: ["openshift"]
+tags: ["google", "rh-sso","keycloak","ansible","authentication","authorization"]
+language: en
+slug: rh-sso-authenticating-openshift-console 
+---
+
+==  Authenticate Openshift Console with RH-SSO
+
+Be aware of default permissions on your platform. 
+ 
+- https://docs.openshift.com/container-platform/3.7/admin_solutions/user_role_mgmt.html#determine-default-user-roles
+
+Be aware of the implications of using Google as an Identity Broker.  
+
+Master and Node Configuration:
+
+- https://docs.openshift.com/container-platform/3.7/admin_solutions/master_node_config.html

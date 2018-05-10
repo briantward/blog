@@ -289,7 +289,7 @@ apache user with /sbin/nologin shell.
     - 01-session.conf 
     - 10-auth_kerb.conf
 
-7.  That should leave two more files in conf.modules.d:
+8.  That should leave two more files in conf.modules.d:
 
     - 00-base.conf, comment out...
         

@@ -1,0 +1,65 @@
+However, there are a few issues with the official Red Hat SSO Quickstarts, and actually Red Hat does not even provide them via their portal.
+I suspect they have become somewhat deprecated. Branch 7.1.x is default, even though we should be on 7.2.x.  The OpenShift templates use their own branch,
+7.0.x-ose
+
+https://github.com/redhat-developer/redhat-sso-quickstarts
+https://github.com/redhat-developer/redhat-sso-quickstarts/tree/7.2.x
+
+The 7.0.x-ose branch is somewhat useful for running with the OCP templates, even though it is a bit out of version-date.  There really doesn't seem to be
+any need for changes for RH-SSO 7.2. The useful change on this branch to make it friendly to OpenShift is the removal of a maven enforcer check on
+the client configuration file.  As this is done via OpenShift commands, it does not need to be enforced within the maven packaging.  TODO: explain this more.
+
+https://github.com/redhat-developer/redhat-sso-quickstarts/tree/7.0.x-ose
+
+
+Using the latest quickstarts I ran into problems...
+
+The following steps resulted in a build dependency error for me, as a result of packages missing in the public Red Hat Maven Repository.
+
+ $ git clone git@github.com:redhat-developer/redhat-sso-quickstarts.git
+ $ cd redhat-sso-quickstarts
+ $ git checkout 7.2.x
+ $ cd app-profile-jee-jsp
+ $ mvn package
+
+I got the following error.  Basically the required package `org.keycloak:keycloak-client-registration-api:jar:3.4.3.Final-redhat-2`
+ is not available at Red Hat's Maven Repo as it should be.
+
+[source]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time: 14:12 min
+[INFO] Finished at: 2018-05-07T15:33:27-04:00
+[INFO] Final Memory: 15M/176M
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal on project keycloak-app-profile-jee-jsp: Could not resolve dependencies for project org.keycloak.quickstarts:keycloak-app-profile-jee-jsp:war:3.4.3.Final-redhat-2: Failed to collect dependencies at org.keycloak:keycloak-client-registration-api:jar:3.4.3.Final-redhat-2: Failed to read artifact descriptor for org.keycloak:keycloak-client-registration-api:jar:3.4.3.Final-redhat-2: Could not transfer artifact org.keycloak:keycloak-client-registration-api:pom:3.4.3.Final-redhat-2 from/to jboss-enterprise-maven-repository (https://maven.repository.redhat.com/ga/): Failed to transfer file: https://maven.repository.redhat.com/ga/org/keycloak/keycloak-client-registration-api/3.4.3.Final-redhat-2/keycloak-client-registration-api-3.4.3.Final-redhat-2.pom. Return code is: 500 , ReasonPhrase:Internal Server Error. -> [Help 1]
+
+
+The upstream community Keycloak quickstarts worked fine to build, but required a slight modification of the pom.
+Be sure to use 3.4.3.Final as this most closely matches RH-SSO 7.2
+
+https://github.com/keycloak/keycloak-quickstarts
+
+ $ git clone git@github.com:keycloak/keycloak-quickstarts.git
+ $ cd keycloak-quickstarts
+ $ git checkout 3.4.3.Final
+ $ cd app-profile-jee-jsp
+ $ mvn package
+
+Comment out or delete this line in the pom.xml so that the build will proceed without checking for the RH-SSO client configuration file.
+We will provide client configuration on the EAP server hosting the app, so we don't need to bundle it inside the war.
+
+[source]
+                             <rules>
+                                 <requireFilesExist>
+                                     <files>
+-                                        <file>${basedir}/config/keycloak.json</file>
++                                        <!--<file>${basedir}/config/keycloak.json</file>-->
+                                     </files>
+                                 </requireFilesExist>
+                             </rules>
+
+
+
+

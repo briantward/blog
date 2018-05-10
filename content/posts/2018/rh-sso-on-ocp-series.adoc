@@ -1,0 +1,24 @@
+---
+title: RH-SSO Authentication on Openshift Series
+date: 2018-05-09T12:00:00-04:00
+categories: ["openshift"]
+tags: ["google", "rh-sso","keycloak","ansible","authentication","authorization"]
+language: en
+slug: rh-sso-on-ocp-series
+---
+
+
+== RH-SSO Authentication on Openshift Series
+
+This is a multi-part series on RH-SSO.
+
+1. link:../rh-sso-on-openshift[Install RH-SSO on Openshift]
+
+2. link:../rh-sso-openshift-quickstart[Install a Quickstart App on Openshift]
+
+3. link:../configure-google-oidc[Configure Google OIDC]
+
+4. link:../rh-sso-google-oidc[Configure RH-SSO to Identity Broker with Google by Hosted Domain]
+
+5. link:../rh-sso-authenticating-openshift-console[Authenticate Openshift Console with RH-SSO]
+

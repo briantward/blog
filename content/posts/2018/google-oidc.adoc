@@ -1,0 +1,16 @@
+---
+title: Configure Google OIDC
+date: 2018-05-09T12:00:00-04:00
+categories: ["openshift"]
+tags: ["google", "rh-sso","keycloak","ansible","authentication","authorization"]
+language: en
+slug: configure-google-oidc
+---
+
+== Configure Google OIDC
+
+https://console.cloud.google.com
+
+Since this topic has been well handled by the Keycloak team, I'm adding there documentation here.
+
+- https://www.keycloak.org/docs/3.4/server_admin/index.html#google

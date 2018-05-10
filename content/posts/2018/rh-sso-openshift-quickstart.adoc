@@ -1,0 +1,182 @@
+---
+title: Install a Quickstart App on Openshift
+date: 2018-05-09T12:00:00-04:00
+categories: ["openshift"]
+tags: ["google", "rh-sso","keycloak","ansible","authentication","authorization"]
+language: en
+slug: rh-sso-openshift-quickstart 
+---
+
+== Install a Quickstart App on Openshift
+
+You will need to build and run an app and configure the client in RH-SSO.
+
+[source]
+$ oc get template -n openshift | grep sso
+eap64-sso-s2i                                   An example EAP 6 Single Sign-On application. For more information about using...   44 (19 blank)     8
+eap70-sso-s2i                                   An example EAP 7 Single Sign-On application. For more information about using...   44 (19 blank)     8
+eap71-sso-s2i                                   An example EAP 7 Single Sign-On application. For more information about using...   44 (19 blank)     8
+sso71-https                                     An example SSO 7 application. For more information about using this template,...   26 (15 blank)     6
+sso71-mysql                                     An example SSO 7 application with a MySQL database. For more information abou...   36 (20 blank)     8
+sso71-mysql-persistent                          An example SSO 7 application with a MySQL database. For more information abou...   37 (20 blank)     9
+sso71-postgresql                                An example SSO 7 application with a PostgreSQL database. For more information...   33 (17 blank)     8
+sso71-postgresql-persistent                     An example SSO 7 application with a PostgreSQL database. For more information...   34 (17 blank)     9
+sso72-https                                     An example SSO 7 application. For more information about using this template,...   26 (15 blank)     6
+sso72-mysql                                     An example SSO 7 application with a MySQL database. For more information abou...   36 (20 blank)     8
+sso72-mysql-persistent                          An example SSO 7 application with a MySQL database. For more information abou...   37 (20 blank)     9
+sso72-postgresql                                An example SSO 7 application with a PostgreSQL database. For more information...   33 (17 blank)     8
+sso72-postgresql-persistent                     An example SSO 7 application with a PostgreSQL database. For more information...   34 (17 blank)     9
+
+Let's go with eap71-sso-s2i...
+
+ $ oc export template eap71-sso-s2i -n openshift > base-eap71-sso-template.yml
+
+Notice that the template uses the 7.0.x-ose branch of the official Red Hat RH-SSO quickstarts. The version is a little behind but it doesn't 
+affect anything on the quickstarts.
+
+[source]
+- description: Git source URI for application
+  displayName: Git Repository URL
+  name: SOURCE_REPOSITORY_URL
+  required: true
+  value: https://github.com/redhat-developer/redhat-sso-quickstarts
+- description: Git branch/tag reference
+  displayName: Git Reference
+  name: SOURCE_REPOSITORY_REF
+  value: 7.0.x-ose
+
+You could just specificy one example app using CONTEXT_DIR, but this only works if you are trying out the examples that don't need two WAR files.
+I'm leaving it blank here, which will cause all maven sub-modules to be built.  That's fine because we'll later tell it to only deploy the artifacts
+we want.
+
+[source]
+- description: Path within Git project to build; empty for root project directory.
+  displayName: Context Directory
+  name: CONTEXT_DIR
+
+Create your parameter file.  Note that we are using the default keystore names below so they are not specifically changed.  
+
+[source]
+$ cat sso-test-params
+APPLICATION_NAME=sso-test
+HOSTNAME_HTTP=sso-test-i.apps.example.com
+HOSTNAME_HTTPS=sso-test.apps.example.com
+HTTPS_NAME=sso-test
+HTTPS_PASSWORD=redacted
+JGROUPS_ENCRYPT_NAME=jgroups
+JGROUPS_ENCRYPT_PASSWORD=redacted
+JGROUPS_CLUSTER_PASSWORD=redacted
+SSO_URL=https://sso.apps.example.com/auth
+SSO_REALM=ocp
+SSO_USERNAME=eap-mgmt-user
+SSO_PASSWORD=redacted
+SSO_SERVICE_URL=https://sso.apps.example.com/auth
+ARTIFACT_DIR=app-jee-jsp/target,app-profile-jee-jsp/target
+
+Create the EAP server keystore and jgroups keystore.
+
+ $ keytool -genkeypair -alias sso-test -keyalg RSA -storetype JKS -keystore keystore.jks -storepass redacted -keypass redacted --dname "CN=sso-test.apps.example.com,OU=openshift,O=example.com,L=City,S=ST,C=US"
+
+ $ keytool -genseckey -alias jgroups -storetype JCEKS -keystore jgroups.jceks -storepass redacted -keypass redacted
+
+Import the SSO server's certificate into the EAP server's truststore. In general, it's just a good idea. (TODO verify truststore needed for this test)
+
+ $ keytool -importcert -keystore truststore.jks -storepass redacted -alias sso-test -trustcacerts -file ../sso/keystore.crt
+
+Create the secrets from your keystores.
+
+ $ oc secret new eap7-app-secret keystore.jks jgroups.jceks truststore.jks
+
+Adjust the default project service account to have the role `view` (TODO found in EAP docs, verify needed)
+
+ $ oc policy add-role-to-user view system:serviceaccount:$(oc project -q):default
+
+Link this service account to the secret (TODO found in EAP docs, verify needed)
+
+ $ oc secrets link default eap7-app-secret
+
+Now we're ready to build from the template:
+
+[source]
+$ oc process -f sso-test.yml --param-file sso-test-params | oc apply -f-
+service "sso-test" created
+service "secure-sso-test" created
+service "sso-test-ping" created
+route "sso-test" created
+route "secure-sso-test" created
+imagestream "sso-test" created
+buildconfig "sso-test" created
+deploymentconfig "sso-test" created
+
+
+You should see this in the logs on the EAP server.
+
+[source]
+----
+$ oc logs -f sso-test-1-xj76z 
+INFO: Configuring JGroups discovery protocol to openshift.DNS_PING
+Using PicketBox SSL configuration.
+Obtained auth token from https://secure-sso:8443/auth for realm ocp
+/opt/eap/standalone/deployments ~
+Registered openid-connect client for module app-jsp in realm ocp on "http://sso-test-i.apps.example.com/app-jsp/*","https://sso-test.apps.example.com/app-jsp/*"
+Configured keycloak subsystem for openid-connect module app-jsp from app-jsp.war
+Registered openid-connect client for module app-profile-jsp in realm ocp on "http://sso-test-i.apps.example.com/app-profile-jsp/*","https://sso-test.apps.example.com/app-profile-jsp/*"
+Configured keycloak subsystem for openid-connect module app-profile-jsp from app-profile-jsp.war
+
+...
+
+12:37:42,608 INFO  [org.wildfly.extension.undertow] (ServerService Thread Pool -- 75) WFLYUT0021: Registered web context: '/app-jsp' for server 'default-server'
+12:37:42,608 INFO  [org.wildfly.extension.undertow] (ServerService Thread Pool -- 72) WFLYUT0021: Registered web context: '/app-profile-jsp' for server 'default-server'
+12:37:42,673 INFO  [org.jboss.as.server] (ServerService Thread Pool -- 40) WFLYSRV0010: Deployed "app-profile-jsp.war" (runtime-name : "app-profile-jsp.war")
+12:37:42,675 INFO  [org.jboss.as.server] (ServerService Thread Pool -- 40) WFLYSRV0010: Deployed "app-jsp.war" (runtime-name : "app-jsp.war")
+12:37:42,675 INFO  [org.jboss.as.server] (ServerService Thread Pool -- 40) WFLYSRV0010: Deployed "activemq-rar.rar" (runtime-name : "activemq-rar.rar")
+12:37:42,858 INFO  [org.jboss.as.server] (Controller Boot Thread) WFLYSRV0212: Resuming server
+12:37:42,868 INFO  [org.jboss.as] (Controller Boot Thread) WFLYSRV0060: Http management interface listening on http://127.0.0.1:9990/management
+12:37:42,868 INFO  [org.jboss.as] (Controller Boot Thread) WFLYSRV0054: Admin console is not enabled
+12:37:42,868 INFO  [org.jboss.as] (Controller Boot Thread) WFLYSRV0025: JBoss EAP 7.1.1.GA (WildFly Core 3.0.12.Final-redhat-1) started in 20048ms - Started 608 of 903 services (500 services are lazy, passive or on-demand)
+----
+
+This confirms that the RH-SSO client adapter was set up for your test app on both the RH-SSO server and the EAP server.
+
+You can now test the application on its exposed URL. You should be brought to a demo page to click a button which then takes you 
+to the RH-SSO login page.
+
+Now you need to manually add a role and a user to test your app login.  This is not automated by the templates/s2i builder image at this time.
+This is detailed in the README here: https://github.com/redhat-developer/redhat-sso-quickstarts
+
+- Go to Roles > Click `Add Role` and name the role `user`, click `Save`.
+- Go to Users > Click `Add User` and name your user however you like, such as `sso-test-user`, click `Save`.
+- Go to `Credentials` and enter a password of your choice.  Click `Temporary` button to set it `OFF` and make this password permanent.
+- Go to `Role Mappings` and add the `user` role to the `Assigned Roles`.  Clicking the `Add Selected` button saves your changes immediately.
+
+Now go test your user login.
+
+=== Debug
+
+On building from OpenShift, the following Maven build error spit out for me from the logs:
+
+[source]
+Caused by: org.apache.maven.wagon.TransferFailedException: Failed to transfer file: https://maven.repository.redhat.com/ga/com/redhat/bom/rh-sso/rh-sso-eap7-bom/7.0.0.GA/rh-sso-eap7-bom-7.0.0.GA.pom. Return code is: 500 , ReasonPhrase:Internal Server Error.
+...
+[ERROR]     'dependencies.dependency.version' for org.keycloak:keycloak-core:jar is missing. @ line 58, column 21
+[ERROR]     'dependencies.dependency.version' for org.keycloak:keycloak-adapter-core:jar is missing. @ line 63, column 21
+[ERROR]     'dependencies.dependency.version' for org.keycloak:keycloak-adapter-spi:jar is missing. @ line 68, column 21
+[ERROR]     'dependencies.dependency.version' for org.jboss.spec.javax.servlet:jboss-servlet-api_3.1_spec:jar is missing. @ line 135, column 29
+
+As it turns out this day, maven.repository.redhat.com was having issues.  A rebuild later worked fine.
+
+I ran into the below error, which was resolved by ? building the app in the same project??
+
+[source]
+ERROR: Unable to connect to SSO/Keycloak at https://sso1.apps.example.com/auth for user eap-mgmt-user and realm ocp. SSO Clients *not* created
+Reason: Check the URL, no response from the URL above, check if it is valid or if the DNS is resolvable.
+
+I ran into the below error, which was resolved by correctly assigning my initial realm in the SSO server build template. Or manually adding the
+expected realm.
+
+[source]
+$ oc logs -f sso-test-1-swvxm
+INFO: Configuring JGroups discovery protocol to openshift.DNS_PING
+Using PicketBox SSL configuration.
+ERROR: Unable to connect to SSO/Keycloak at https://secure-sso:8443/auth for user eap-mgmt-user and realm ocp. SSO Clients *not* created
+Reason: Invalid user credentials
