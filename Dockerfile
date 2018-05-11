@@ -8,10 +8,11 @@ RUN cd /opt \
   && rm hugo_0.40.3_Linux-64bit.tar.gz \
   && yum -y install ruby \
   && yum clean all \
-  && gem install asciidoctor
+  && rm -rf /var/cache/yum \
+  && gem install asciidoctor --no-user-install
 
 EXPOSE 1313
 
 WORKDIR /opt/blog
 
-CMD ["/opt/hugo","server"]
+CMD ["/opt/hugo","server","--bind","0.0.0.0"]

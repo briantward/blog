@@ -1,0 +1,35 @@
+# This build still requires anyuid permissions because it runs as a specific user
+FROM centos:centos7
+
+COPY . /opt/blog
+
+RUN cd /opt \
+  && curl -O -J -L https://github.com/gohugoio/hugo/releases/download/v0.40.3/hugo_0.40.3_Linux-64bit.tar.gz \
+  && tar -xf hugo_0.40.3_Linux-64bit.tar.gz \
+  && rm hugo_0.40.3_Linux-64bit.tar.gz \
+  && yum -y install ruby \
+  && yum clean all \
+  && rm -rf /var/cache/yum \
+  && groupadd -r hugo \
+  && useradd --no-log-init -r -g hugo hugo \
+  && gem install asciidoctor --no-user-install \
+  && chown -R hugo:hugo /opt/blog \ 
+  && mkdir /home/hugo \
+  && chown -R hugo:hugo /home/hugo 
+# This does not work because Docker changes the PATH
+#  && echo "PATH=\$PATH:/home/hugo/bin" >> /etc/environment
+
+EXPOSE 1313
+
+WORKDIR /opt/blog
+
+USER hugo
+
+RUN gem install asciidoctor 
+# This does not work because Docker changes the PATH
+#  && source /etc/environment
+
+# This does work!
+ENV PATH "PATH=$PATH:/home/hugo/bin"
+
+CMD ["/opt/hugo","server","--bind","0.0.0.0"]
