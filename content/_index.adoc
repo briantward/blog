@@ -12,4 +12,10 @@ and administration tasks on a daily basis.  I've started this collection
 to remind myself of good programming practices as well as basic system
 configurations that I need to get things done.  
 
+Bear with me as I figure out this blog, hugo, and asciidoc stuff...
+
+Don't pay attention to dates.  This is technically running on a blog engine,
+but I plan on revising my work on the fly frequently.  Ideally this site will 
+show you version history to help you see how my own work has progressed.
+
 Brian Ward

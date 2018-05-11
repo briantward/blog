@@ -1,0 +1,212 @@
+apiVersion: v1
+kind: Template
+metadata:
+  creationTimestamp: null
+  name: btw-blog-template
+objects:
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewBuild
+    creationTimestamp: null
+    labels:
+      build: btw-blog
+    name: btw-blog
+  spec:
+    failedBuildsHistoryLimit: 5
+    nodeSelector: null
+    output:
+      to:
+        kind: ImageStreamTag
+        name: btw-blog:latest
+    postCommit: {}
+    resources: {}
+    runPolicy: Serial
+    source:
+      binary: {}
+      type: Binary
+    strategy:
+      dockerStrategy:
+        from:
+          kind: ImageStreamTag
+          name: centos:centos7
+      type: Docker
+    successfulBuildsHistoryLimit: 5
+    triggers:
+    - github:
+        secret: 6wJO7aResVFhzrstzKE-
+      type: GitHub
+    - generic:
+        secret: Rwx_UhXXnETeNEJdtQnr
+      type: Generic
+  status:
+    lastVersion: 0
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewBuild
+    creationTimestamp: null
+    generation: 1
+    labels:
+      build: btw-blog
+    name: btw-blog
+  spec:
+    lookupPolicy:
+      local: false
+    tags:
+    - annotations: null
+      from:
+        kind: DockerImage
+        name: docker-registry.default.svc:5000/btw/btw-blog:latest
+      generation: null
+      importPolicy: {}
+      name: latest
+      referencePolicy:
+        type: ""
+  status:
+    dockerImageRepository: ""
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewBuild
+      openshift.io/image.dockerRepositoryCheck: 2018-05-11T15:22:12Z
+    creationTimestamp: null
+    generation: 2
+    labels:
+      build: btw-blog
+    name: centos
+  spec:
+    lookupPolicy:
+      local: false
+    tags:
+    - annotations:
+        openshift.io/imported-from: centos:centos7
+      from:
+        kind: DockerImage
+        name: docker-registry.default.svc:5000/btw/centos:centos7
+      generation: 2
+      importPolicy: {}
+      name: centos7
+      referencePolicy:
+        type: Source
+  status:
+    dockerImageRepository: ""
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    generation: 1
+    labels:
+      app: btw-blog
+    name: btw-blog
+  spec:
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      app: btw-blog
+      deploymentconfig: btw-blog
+    strategy:
+      activeDeadlineSeconds: 21600
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        annotations:
+          openshift.io/generated-by: OpenShiftNewApp
+        creationTimestamp: null
+        labels:
+          app: btw-blog
+          deploymentconfig: btw-blog
+      spec:
+        containers:
+        - image: docker-registry.default.svc:5000/btw/btw-blog@sha256:714ba61c4616d7dfd22ec4cd5bd770cdf136d397a049997b715d75b34bc400f1
+          imagePullPolicy: Always
+          name: btw-blog
+          ports:
+          - containerPort: 1313
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - btw-blog
+        from:
+          kind: ImageStreamTag
+          name: btw-blog:latest
+          namespace: btw
+      type: ImageChange
+  status:
+    availableReplicas: 0
+    latestVersion: 0
+    observedGeneration: 0
+    replicas: 0
+    unavailableReplicas: 0
+    updatedReplicas: 0
+- apiVersion: v1
+  kind: Route
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: btw-blog
+    name: btw-blog
+  spec:
+    host: btw-blog.apps.opencontainer.io
+    port:
+      targetPort: 1313-tcp
+    to:
+      kind: Service
+      name: btw-blog
+      weight: 100
+    wildcardPolicy: None
+  status:
+    ingress:
+    - conditions:
+      - lastTransitionTime: 2018-05-11T15:24:56Z
+        status: "True"
+        type: Admitted
+      host: btw-blog.apps.opencontainer.io
+      routerName: router
+      wildcardPolicy: None
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    labels:
+      app: btw-blog
+    name: btw-blog
+  spec:
+    ports:
+    - name: 1313-tcp
+      port: 1313
+      protocol: TCP
+      targetPort: 1313
+    selector:
+      app: btw-blog
+      deploymentconfig: btw-blog
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}

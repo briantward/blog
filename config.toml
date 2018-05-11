@@ -1,8 +1,8 @@
-baseURL = "https://dataxf.com/"
+baseURL = "https://btw-blog.apps.opencontainer.io/"
 defaultContentLanguage = "en"
 enableEmoji = true
 languageCode = "en-us"
-paginate = 4
+paginate = 20
 pygmentsCodeFences = true
 pygmentsStyle = "native"
 pygmentsUseClasses =  true
@@ -21,7 +21,7 @@ title = "Everyday Linux"
   adsenseDataAdSlot = ""
   addThisId = ""
 [permalinks]
-  posts = "/:year/:month/:day/:slug/"
+  posts = "/:slug/"
 [pygmentsOptions]
   linenos = false
 [outputs]

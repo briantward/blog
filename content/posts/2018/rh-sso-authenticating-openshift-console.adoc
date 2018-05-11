@@ -9,6 +9,8 @@ slug: rh-sso-authenticating-openshift-console
 
 ==  Authenticate Openshift Console with RH-SSO
 
+Install based on OpenShift 3.7.  Will probably work on other similar versions.
+
 Be aware of default permissions on your platform. 
  
 - https://docs.openshift.com/container-platform/3.7/admin_solutions/user_role_mgmt.html#determine-default-user-roles
@@ -17,4 +19,78 @@ Be aware of the implications of using Google as an Identity Broker.
 
 Master and Node Configuration:
 
-- https://docs.openshift.com/container-platform/3.7/admin_solutions/master_node_config.html
+- https://docs.openshift.com/container-platform/3.7/admin_solutions/master_node_config.htmli
+
+Here is a great step-by-step example workflow in Red Hat official documentation:
+
+- https://access.redhat.com/documentation/en-us/red_hat_single_sign-on/7.2/html/red_hat_single_sign-on_for_openshift/tutorials#OSE-SSO-AUTH-TUTE
+- https://access.redhat.com/documentation/en-us/red_hat_single_sign-on/7.2/html/red_hat_single_sign-on_for_openshift/tutorials#configuring_openshift_master_for_red_hat_single_sign_on_authentication
+
+Edit `/etc/origin/master/master-config.yaml`
+
+[source]
+----
+identityProviders:
+- challenge: true
+  login: true
+  name: htpasswd_auth
+  provider:
+    apiVersion: v1
+    file: /etc/origin/openshift-passwd
+    kind: HTPasswdPasswordIdentityProvider
+- name: rh_sso
+  challenge: false
+  login: true
+  mappingInfo: add
+  provider:
+    apiVersion: v1
+    kind: OpenIDIdentityProvider
+    clientID: openshift-demo
+    clientSecret: 7b0384a2-b832-16c5-9d73-2957842e89h7
+    ca: xpaas.crt
+    urls:
+      authorize: https://secure-sso-sso-app-demo.openshift32.example.com/auth/realms/OpenShift/protocol/openid-connect/auth
+      token: https://secure-sso-sso-app-demo.openshift32.example.com/auth/realms/OpenShift/protocol/openid-connect/token
+      userInfo: https://secure-sso-sso-app-demo.openshift32.example.com/auth/realms/OpenShift/protocol/openid-connect/userinfo
+    claims:
+      id:
+      - sub
+      preferredUsername:
+      - preferred_username
+      name:
+      - name
+      email:
+      - email
+----
+
+The above link is a great resource for modifying your OpenShift cluster if you did a basic install and you want
+to manually update all your master nodes.  But that's just silly.  I hope you performed the advanced install
+with ansible.  In that event, you will need an entry in your inventory file such as the below.
+
+[source]
+----
+# OpenID auth
+#openshift_master_identity_providers=[{"name": "openid_auth", "login": "true", "challenge": "false", "kind": "OpenIDIdentityProvider", "client_id": "my_client_id", "client_secret": "my_client_secret", "claims": {"id": ["sub"], "preferredUsername": ["preferred_username"], "name": ["name"], "email": ["email"]}, "urls": {"authorize": "https://myidp.example.com/oauth2/authorize", "token": "https://myidp.example.com/oauth2/token"}, "ca": "my-openid-ca-bundle.crt"}]
+
+# OpenID auth
+openshift_master_identity_providers=[{"name": "rh-sso", "login": "true", "challenge": "false", "kind": "OpenIDIdentityProvider", "client_id": "ocp", "client_secret": "SOME_SECRET_CODE", "claims": {"id": ["sub"], "preferredUsername": ["preferred_username"], "name": ["name"], "email": ["email"]}, "urls": {"authorize": "https://sso.apps.example.com/auth/realms/ocp/protocol/openid-connect/auth", "token": "https://sso.apps.example.com/auth/realms/ocp/protocol/openid-connect/token", "userInfo": "https://sso.apps.example.com/auth/realms/ocp/protocol/openid-connect/userinfo"}, "ca": "ocp-sso.pem"}]
+
+#
+# Configure OpenID CA certificate
+# Specify either the ASCII contents of the certificate or the path to
+# the local file that will be copied to the remote host. CA
+# certificate contents will be copied to master systems and saved
+# within /etc/origin/master/ with a filename matching the "ca" key set
+# within the OpenIDIdentityProvider.
+#
+openshift_master_openid_ca=INSERT_CA_ONE_LINE_OR_PATH_HERE
+----
+
+Did you recall where you wrote out your pem file to a one-liner?  This is where it is useful.  You can use the one-liner to set a value for `openshift_master_openid_ca`
+
+Now re-run your ansible playbook.
+
+  $ ansible-playbook -i inventory-file playbooks/byo/openshift-master/config.yml
+
+
+

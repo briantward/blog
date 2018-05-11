@@ -1,0 +1,80 @@
+---
+title: Hugo Blog on OpenShift
+date: 2018-05-11
+categories: ["openshift"]
+tags: ["go", "hugo","blog","asciidoc","asciidoctor"]
+language: en
+slug: hugo-blog-on-openshift 
+---
+
+= Hugo Blog on OpenShift
+
+. Create a Dockerfile that adds all the dependencies your environment needs.  A lot of the work is in this Dockerfile.
+I used asciidocs, so I needed an implementation of
+either asciidoc or asciidoctor, the two options that Hugo provides integration with.  I chose asciidoctor.
+
+[source,indent=0]
+----
+$ cat Dockerfile
+FROM centos:centos7
+
+COPY . /opt/blog
+
+RUN cd /opt \
+  && curl -O -J -L https://github.com/gohugoio/hugo/releases/download/v0.40.3/hugo_0.40.3_Linux-64bit.tar.gz \
+  && tar -xf hugo_0.40.3_Linux-64bit.tar.gz \
+  && rm hugo_0.40.3_Linux-64bit.tar.gz \
+  && yum -y install ruby \
+  && yum clean all \
+  && rm -rf /var/cache/yum \
+  && gem install asciidoctor --no-user-install 
+
+EXPOSE 1313
+
+WORKDIR /opt/blog
+
+CMD ["/opt/hugo","server","--bind","0.0.0.0"] 
+----
+
+. Create a project in openshift if needed.
+
+ $ oc new-project my-blog
+
+. Provide authorization to build containers using root access, because we are building this image from the upstream
+centos distribution.  You might have to request this from your system admin if
+you do not have access to execute this command. By default, there are three `sa` or `serviceaccounts` in each project: 
+`builder`, `deployer`, and `default`.  You will only need root to build the image, but it can deploy and run as anyone.  
+This is better security practice.  Best security practice would be to derive this image from a secured image on Red Hat's
+repository.  Perhaps we'll do that later.  
+
+ $ oc adm policy add-scc-to-user anyuid -z builder -n my-blog
+
+See notes here: 
+
+- https://blog.openshift.com/getting-any-docker-image-running-in-your-own-openshift-cluster/
+- https://docs.openshift.com/container-platform/3.7/admin_guide/manage_scc.html#enable-images-to-run-with-user-in-the-dockerfile
+
+. Create a new blank build.  You can get more How-To details here: https://docs.openshift.com/container-platform/3.7/dev_guide/dev_tutorials/binary_builds.html
+
+ $ oc new-build --strategy docker --binary --docker-image centos:centos7 --name my-new-blog
+
+. Start the Docker build from the directory.
+
+ $ oc start-build my-new-blog --from-dir . --follow
+
+. Create a new app deployment based on your image.
+
+ $ oc new-app my-new-blog
+
+. Expose the route externally.
+
+ $ oc expose svc/my-new-blog --hostname btw-blog.apps.example.com
+
+. Export your work as a template to rebuild easily.
+
+ $ oc export all --as-template=btw-blog-template > my-blog-template-template.yaml
+
+TODO: Next step to show how build from github.
+
+
+
