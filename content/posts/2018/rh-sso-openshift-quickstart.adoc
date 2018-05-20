@@ -1,5 +1,5 @@
 ---
-title: Install a Quickstart App on Openshift
+title: Install a Quickstart App on Openshift Authenticated by RH-SSO
 date: 2018-05-09T12:00:00-04:00
 categories: ["openshift"]
 tags: ["google", "rh-sso","keycloak","ansible","authentication","authorization"]
@@ -7,7 +7,7 @@ language: en
 slug: rh-sso-openshift-quickstart 
 ---
 
-== Install a Quickstart App on Openshift
+== Install a Quickstart App on Openshift Authenticated by RH-SSO
 
 You will need to build and run an app and configure the client in RH-SSO.
 

@@ -14,7 +14,7 @@ This is a multi-part series on RH-SSO.
 
 1. link:../rh-sso-on-openshift[Install RH-SSO on Openshift]
 
-2. link:../rh-sso-openshift-quickstart[Install a Quickstart App on Openshift]
+2. link:../rh-sso-openshift-quickstart[Install a Quickstart App on Openshift Authenticated by RH-SSO]
 
 3. link:../configure-google-oidc[Configure Google OIDC]
 
