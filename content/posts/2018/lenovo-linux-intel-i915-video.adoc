@@ -1,0 +1,71 @@
+---
+title: Lenovo Intel i915 Video Drivers in Linux
+date: 2018-05-19
+categories: ["linux"]
+tags: ["linux","intel","i915","video","T460s","Lenovo"]
+language: en
+slug: lenovo-linux-intel-i915-video
+---
+
+= Lenovo Intel i915 Video Drivers in Linux
+
+I'm running fedora 27 on my Lenovo T460s and have been for a while.  I have 
+a docking station with two 24" monitors at work and another docking station with two 27" monitors at home.  I switch between them frequently.  Back in fedora
+21 and 22 I had tons of problems.  Sometimes monitors didn't come on, 
+sometimes one monitor came on, and sometimes things worked fine.  It got better
+as of fedora 27, such that I was pretty happy with things.  I'm thankful for the
+hard work put into the video drivers by the people behind fedora, the linux kernel, and the many other distributions contributing.  
+
+Something happened recently where things went a little backward.  All of a
+sudden, I was having complete crashes and uncontrolled reboots when moving
+my laptop from one docking station to another.  Maybe it had to do with 
+moving between docking stations.  Maybe it just had to do with docking 
+stations in general.  I don't know
+the details exactly, but here is my own system analysis.
+
+This error had been showing up a lot in my system journal/dmesg, right
+at the time of crash:
+
+  kernel: [drm:intel_ddi_prepare_link_retrain [i915]] *ERROR* Timeout waiting for DDI BUF C idle bit
+
+
+It apparently started in April with kernel 4.15.9-300.fc27.x86_64:
+
+  kernel: Linux version 4.15.9-300.fc27.x86_64 (mockbuild@bkernel02.phx2.fedoraproject.org) (gcc version 7.3.1 20180303 (Red Hat 7.3.1-5) (GCC)) #1 SMP M
+  
+
+A lot of knowledge came from the folks at Arch Linux:
+
+https://wiki.archlinux.org/index.php/intel_graphics#Skylake_support
+
+Because they stated "to take advantage of some driver options, you will need to create a Xorg configuration file", I added this to `/usr/share/X11/xorg.conf.d/20-intel.conf`:
+
+[source]
+----
+Section "Device"
+ Identifier "Intel Graphics"
+ Driver "intel"
+EndSection
+----
+
+I also enabled "GuC / HuC firmware loading" in `/etc/modprobe.d/i915.conf`, since I am on kernel 4.16 now.
+
+  options i915 enable_guc=1
+
+What does all this stuff mean?  I'm not really sure, but I encourage you 
+to read up on the links if you're curious.  At any rate, it seems like 
+something changed in the i915 driver that was being used for my device. 
+According to a few of these posts, tweaking these driver parameters is 
+helpful.  Also, reading the https://jlk.fjfi.cvut.cz/arch/manpages/man/intel.4[intel(4)] man page could be helpful.
+So far I have not had any crashes, but I will report again if I do.  
+I'm not even sure if the changes I made will really do anything.  I might 
+need to update the kernel boot line rather than the modprobe conf.
+
+
+One day I'll spend more time on video and graphics.  Not today.
+
+== Debugging
+
+Similar Issues:
+
+- https://bugs.launchpad.net/ubuntu/+source/xserver-xorg-video-intel/+bug/1552040

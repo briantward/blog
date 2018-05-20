@@ -9,59 +9,203 @@ slug: bridge-host-vm
 
 == Bridged Host-VM Network
 
+[cols="2,2"]
+|===
+|Host OS: 
+|Red Hat Enterprise Linux 7.5, may also work on other RHEL-based variants
+
+|Host Virtual Platform: 
+|virt-manager, virsh, libvirt, qemu
+
+|Guest OS: 
+|Any
+|===
+
 Setup a bridged network connection on RHEL 7.5 using Network Manager so that a VM
 can reside on the same network as the host.
 
 e.g.
 
-host 192.168.1.10
-vm1 192.168.1.20
-vm2 192.168.1.21
+ host 192.168.1.10
+ vm1 192.168.1.20
+ vm2 192.168.1.21
+
 ...
 vm1 and vm2 will use the bridge from the host to reach the DHCP server 192.168.1.1
 
-
 I had figured this out before on previous versions of RHEL, but after doing an update to 7.5
 my network connections got reset.  Alas, after much trial and error wasted time, I decided
-to write down the process this time.  I am not a network technician, but I remember enough from
-time to time when I need to set up something particular like this.
+to write down the process this time.  I am not a network technician, but usually I remember enough from
+time to time when I need to set up something particular like this.  This time, I needed help.
 
-Other sites had information about setting this up with network instead of NetworkManager.
-https://askubuntu.com/questions/551680/how-to-do-virtual-networking-all-types-in-virt-manager
-http://blog.bodhizazen.com/linux/virt-manager-bridged-networking/
-https://www.centos.org/forums/viewtopic.php?t=8284
+After writing up these instructions, I found a great video tutorial of similar work.  Here are two
+videos demonstrating this gist of this tutorial in fedora, from another author.  I think the GUIs
+may have changed just slightly since the 7.5 release, but otherwise this is still good stuff.
+You might find watching this first useful.
 
-Here are two videos demonstrating this gist of this tutorial in fedora, from another author.
  - https://www.youtube.com/watch?v=rSxK_08LSZw
  - https://www.youtube.com/watch?v=TGXz94id-AM
- Note that the GNOME NetworkManager GUI (what is correct name?) for this version (?) of fedora is different as
- of fedora26 and RHEL 7.5.  In the latter versions, the ability to create a bridge
- from the User Profile Network Manager (top right of your screen) is removed.  You
- can use any of the three examples below instead.
 
 
-There are several ways this can be accomplished.  Sysadmins from pre-NetworkManager
-will be comfortable with the scripts in ``/etc/sysconfig/network-scripts`` as they
-are similar to those found in ``/etc/init.d/network-scripts``
+== Before we begin
 
-1. nmcli
+First, do not use `network` to manage your network behavior.  That is the old way of things.  
+A lot of old tutorials are still out there claiming you need to use `network` to make `virt-manager` 
+or `virsh` or `libvirt` happy.  It's not true anymore.  Use `NetworkManager` instead to manage 
+your network behavior.  If you don't know the difference between these two tools, go research it.
 
-2. nmtui
+- https://askubuntu.com/questions/551680/how-to-do-virtual-networking-all-types-in-virt-manager
+- http://blog.bodhizazen.com/linux/virt-manager-bridged-networking/
+- https://www.centos.org/forums/viewtopic.php?t=8284
 
-3. nm-connection-editor
+Second, the same tutorials frequently suggest using the "Virtual Network Connections" feature of 
+virt-manager.  Do NOT attempt to use this.  It simply doesn't work with `NetworkManager`.  In
+fact, I think one of the sites I found suggested this is why `network` is required.  You'll see
+shortly just how to configure `NetworkManager` and your virtual machines. For now, take a look 
+at these screen shots under "QEMU Virtial Networks" and understand that if you have been working with this interface, and you're 
+frustrated you haven't got the results you want, you should not be surprised. 
 
-15 char limit for device name
+== QEMU Virtual Networks
 
 DO NOT use the virt-manager tool for creating bridged connections.
-Virt-Manager
-Edit > Connection Details
+
+Virt-Manager > Edit > Connection Details
 
 "Virtual Networks" Tab is somewhat misleading.  You can create an isolated private
 network for just your VMs.  This could be advantageous if you wanted to create a whole
 separate subnet just for your vms.  All of them would be addressable through a NAT on
 your host machine.  I did not want that.
 
+image:/images/vm-bridge/001-qemu-virtual-networks.png[]
+
+This is a suggested flow below for creating a NAT'd isolated network.  It does not bridge
+the vm to the host subnet.  The "Virtual Network Interface" settings on your vm profile 
+used to suggest creating a "bridge" this way.  TODO verify this with earlier image, show example.  
+
+image:/images/vm-bridge/002-qemu-create-virtual-networks-01.png[]
+image:/images/vm-bridge/003-qemu-create-virtual-networks-02.png[]
+image:/images/vm-bridge/004-qemu-create-virtual-networks-03.png[]
+image:/images/vm-bridge/005-qemu-create-virtual-networks-04.png[]
+
+== Overview: Configuration Approaches
+
+Note that the GNOME GUI for managing network connections (gnome-control-center) for this version (?) of fedora is different as
+ of fedora26 and RHEL 7.5.  In the latter versions, the ability to create a bridge
+ from the User Profile Network Manager (top right of your screen) is removed.  You
+ can use any of the three other examples below instead.
+
+////
+There are several ways this can be accomplished.  Sysadmins from pre-NetworkManager
+will be comfortable with the scripts in ``/etc/sysconfig/network-scripts`` as they
+are similar to those found in ``/etc/init.d/network-scripts``
+////
+
+. gnome-control-center (deprecated - feature removed)
+
+. nm-connection-editor
+
+. nmtui
+
+. nmcli
+
+== Using gnome-control-center GUI
+
+You used to be able to build bridges from the gnome-control-panel.  This is the "Settings"
+feature from the top right drop-down screen or from the "Settings" control panel.
+
+  $ gnome-control-center network
+
+DO NOT EDIT YOUR NETWORK CONFIGURATION HERE
+image:/images/vm-bridge/006-gnome-settings-network-01.png[]
+
+DO NOT EDIT YOUR NETWORK CONFIGURATION HERE
+image:/images/vm-bridge/007-gome-shortcut-screenshot-01.png[]
+
+DO NOT EDIT YOUR NETWORK CONFIGURATION HERE
+image:/images/vm-bridge/008-gome-shortcut-screenshot-02.png[]
+
+== Using nm-connection-editor
+
+Bring up nm-connection-editor from the terminal or any shortcut you may have.
+
+ $ nm-connection-editor
+
+The dialog below shows I have not yet configured any typical ethernet network interface.
+However, it does show the default virt setup with a vibr0 bridge for creating completely
+isolated networks for your vms.  We are not going to use it, but we will leave it in place
+for now.
+
+image:/images/vm-bridge/012-gnome-network-connections-01.png[]
+
+Click the "+" icon and up pops this dialog.  Choose "Bridge" type. Sorry the image below
+just shows "Ethernet".  TODO show better image.
+
+image:/images/vm-bridge/014-connmanager-create-network-connection.png[]
+image:/images/vm-bridge/013-gnome-network-connections-02.png[]
+
+Rename your connection as desired. 
+Note that there is a 15 character limit for "Connection Name".  
+If you go past 15 characters, it will look ok
+in the user interface but the button to Save or Activate the profile will not be available.
+Notice here I tried naming my connection "bridge-vm-enp0s25" to logically identify what 
+I am bridging.  However, because it has too many characters, the "Save" button remains 
+greyed-out.
+
+image:/images/vm-bridge/022-connmanager-edit-network-connection.png[]
+
+Here I used a shorter bridge name: "br-vm-enp0s25". Also, make your "Connection Name" and
+"Interface Name" match.  It's funny how such trivial problems
+from poor user interface translate into enormous amounts of wasted time and effort. I 
+thought I was configuring something else incorrectly.
+
+image:/images/vm-bridge/026-connmanager-edit-network-connection.png[]
+
+Click "Add" next to "Bridged Connections" to specific which device you want to source the
+bridge from.  That is, what physical device or ethernet port is attached to the network 
+you want the VMs to bridge to. In my case, I want "enp0s25".
+
+TODO add images here
+
+Click "Ethernet" in the dialog box this time.  Name this Connection after your network 
+interface, then select the same network interface in the "Device" dropdown. Click Save.
+
+TODO add images here
+
+image:/images/vm-bridge/025-connmanager-edit-network-connection.png[]
+
+Now click "Save" and you should see the results similar to below.
+
+image:/images/vm-bridge/027-connmanager-edit-network-connection.png[]
+
+Now `virt-manager` go to Edit > Connection Detils > Network Interfaces.
+
+image:/images/vm-bridge/019-qemu-network-connections.png[]
+
+Click this "+" icon to add your bridge.  It should show up here. If it does not, you may want
+to restart services or reboot the machine. TODO identify which services need rebooting, just NetworkManager? 
+
+image:/images/vm-bridge/028-qemu-network-connections-add-bridge.png[]
+
+Now go to your vm in `virt-manager`.  Double-Click on it to bring it up.  Click on the light-bulb
+icon to change its configuration.  Click on the device labeled "NIC" and change "Network Source"
+to match the bridge you just set up.
+
+image:/images/vm-bridge/029-qemu-device-settings.png[]
+
+Note here that you will see a vnet0 get added as a slave interface automatically the next time 
+everything starts and is working.  This is required for things to work.  See my debug note below.
+
+image:/images/vm-bridge/030-qemu-network-connections-add-bridge.png[]
+
+
+== Using nm-tui
+
+== Using nm-cli
+
+== Debugging
+
 Another alternative:
+
 - https://www.youtube.com/watch?v=8LnghnDv0LY (this one creates a routed private network)
 
 I ran into this problem:
