@@ -1,0 +1,25 @@
+---
+title: SSH-Agent
+date: 2018-05-19
+categories: ["linux"]
+tags: ["linux","ssh","ssh-agent"]
+language: en
+slug: ssh-agent
+---
+
+= SSH-Agent
+
+Every now and then for some reason my ssh-agent does work by default on startup.
+I have to reach out to this lovely stackoverflow to remember such a simple 
+command:
+
+  exec ssh-agent bash
+  ssh-add ~/.ssh/*
+
+
+alternatively
+
+  eval `ssh-agent -s`
+  ssh-add ~/.ssh/*
+
+https://stackoverflow.com/questions/17846529/could-not-open-a-connection-to-your-authentication-agent
