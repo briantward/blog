@@ -29,9 +29,13 @@ https://workaround.org/article/updating-the-bios-on-lenovo-laptops-from-linux-us
  # wget https://download.lenovo.com/pccbbs/mobiles/n1cur21w.iso
  # dnf install geteltorito
  # geteltorito -o bios.img n1cur21w.iso
- # dd if=boot.img of=/dev/sdb
 
 Make sure you identify the correct block device of your usb drive or you will
 probably have lots of other problems. This command might be helpful.
 
  # dmesg | grep sd
+
+My block device for my usb stick is /dev/sdb.  So here is the dd command to
+copy the image to the ubs:
+
+ # dd if=boot.img of=/dev/sdb

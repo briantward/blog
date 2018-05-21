@@ -1,0 +1,5 @@
+== Networking Tips
+
+- find the eth0 ip addr
+
+  ETH0_IP=`ifconfig eth0 2>/dev/null | awk '/inet addr:/ {print $2}' | sed 's/addr://'`

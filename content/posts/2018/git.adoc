@@ -1,0 +1,6 @@
+== Git Tips
+
+- When you are required to use git over HTTPS but you don't want to be prompted for your credentials every time.
+
+  $ git config --global credential.helper cache
+  $ git config credential.helper 'cache --timeout=3600'

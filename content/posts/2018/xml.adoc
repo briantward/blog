@@ -1,0 +1,5 @@
+== XML Tips
+
+- Format raw xml on the cli
+
+  echo '<root><foo a="b">lorem</foo><bar value="ipsum" /></root>' | xmllint --format -

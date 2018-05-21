@@ -1,0 +1,9 @@
+== VIM Tips
+
+- Set YAML filetypes to have two spaces on indent
+
+  $ echo "autocmd FileType yaml,yml setlocal ai ts=2 sw=2 et" >> ~/.vimrc
+
+- write with sudo when it wasn't opened with sudo:
+
+  :w !sudo tee % 

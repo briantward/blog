@@ -1,0 +1,14 @@
+
+- Move a file to different extension, or change parts of a name
+
+  $ mv /etc/yum.repos.d/redhat.{repo,disabled}
+
+- Search for all mac dot underscore files
+
+  $ find -name ._\* 
+  $ find -name .DS_Store
+  $ find -name .DS_Store -delete
+
+- find and replace text in files in a directory, recursively:
+
+  $ find /directory -type f -print0 | xargs -0 sed -i 's/old-text/new-text/g'
