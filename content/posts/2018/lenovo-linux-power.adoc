@@ -1,2 +1,13 @@
+---
+title: Lenovo Linux Power Configuration T460s
+date: 2018-05-21
+categories: ["tips"]
+tags: ["tips"]
+language: en
+slug: lenovo-linux-power
+---
+
+== Lenovo Linux Power Configuration T460s
+
 /etc/UPower/UPower.conf
 CriticalPowerAction=Hibernate

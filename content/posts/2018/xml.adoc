@@ -1,3 +1,12 @@
+---
+title: XML Tips
+date: 2018-05-21
+categories: ["tips"]
+tags: ["tips"]
+language: en
+slug: xml
+---
+
 == XML Tips
 
 - Format raw xml on the cli

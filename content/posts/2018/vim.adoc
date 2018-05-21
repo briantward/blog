@@ -1,3 +1,12 @@
+---
+title: VIM Tips
+date: 2018-05-21
+categories: ["tips"]
+tags: ["tips"]
+language: en
+slug: vim
+---
+
 == VIM Tips
 
 - Set YAML filetypes to have two spaces on indent

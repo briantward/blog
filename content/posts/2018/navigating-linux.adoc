@@ -1,3 +1,13 @@
+---
+Title: Navigating Linux
+date: 2018-05-21
+categories: ["tips"]
+tags: ["tips"]
+language: en
+slug: navigating-linux
+---
+
+== Navigating Linux
 
 - Move a file to different extension, or change parts of a name
 

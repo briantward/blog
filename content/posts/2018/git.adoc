@@ -1,3 +1,12 @@
+---
+title: Git Tips
+date: 2018-05-21
+categories: ["tips"]
+tags: ["tips","git"]
+language: en
+slug: git
+---
+
 == Git Tips
 
 - When you are required to use git over HTTPS but you don't want to be prompted for your credentials every time.
