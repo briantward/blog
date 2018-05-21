@@ -74,7 +74,34 @@ See notes here:
 
  $ oc export all --as-template=btw-blog-template > my-blog-template-template.yaml
 
-TODO: Next step to show how build from github.
+
+How build from GitHub:
+
+. Generate a new build config 
+  
+ $ oc new-build --strategy docker https://github.com/briantward/blog --name btw-blog-blue
+
+. Create a new deployment from this build config
+
+ $ oc new-app btw-blog-blue
+
+. Edit your route to point to the new service 
+
+ $ oc edit route btw-blog
+
+. Make changes, commit to GitHub, then start a new build from your latest changes: 
+
+ $ oc start-build btw-blog-blue
+
+
+Update for trigger from GitHub. Find URL from buildConfig: "Webhook GitHub:	URL: ".  Add this URL to your WebHook in GitHub and make sure to choose content
+type "application/json".  It defaults to "application/x-www-form-urlencoded" and OpenShift doesn't like that format.
+
+ $ oc describe bc/btw-blog-blue
+
+
+
+
 
 
 

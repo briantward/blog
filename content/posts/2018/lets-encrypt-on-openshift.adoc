@@ -1,0 +1,35 @@
+---
+title: Let's Encrypt on OpenShift
+date: 2018-05-21
+categories: ["openshift"]
+tags: ["openshift"]
+language: en
+slug: lets-encrypt-on-openshift
+---
+
+== Let's Encrypt on OpenShift
+
+Updated OS on load balancer
+
+  # wget https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+  # yum install epel-release-latest-7.noarch.rpm
+  
+Uses python:
+
+- https://www.redpill-linpro.com/sysadvent/2017/12/15/letsencrypt-on-openshift.html
+- https://certbot.eff.org/about/
+
+Uses bash:
+- https://blog.openshift.com/lets-encrypt-acme-v2-api/
+- https://github.com/Neilpang/acme.sh#currently-acmesh-supports
+
+
+- https://community.letsencrypt.org/t/acme-v2-and-wildcard-certificate-support-is-live/55579
+- https://www.namecheap.com/
+
+Other:
+
+- https://github.com/certbot/certbot/issues/5074
+- https://github.com/freeipa/freeipa-letsencrypt
+- https://github.com/antevens/letsencrypt-freeipa
+- https://certbot.eff.org/docs/using.html#dns-plugins
