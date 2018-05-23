@@ -17,14 +17,16 @@ for Meltdown/Spectre was in 1.31.  Good thing no one cares about my machine
 but me.
 
 . Find your system's bios update from Lenovo, via Bootable CD.  Mine, a T460s,
-was here: https://pcsupport.lenovo.com/us/en/downloads/ds112118
+was here: 
+
+ - https://pcsupport.lenovo.com/us/en/downloads/ds112118
 
 . Check out this guys's great post. You would think you could just copy the
 `.iso` to your USB device with `dd`, but no you cannot.  It's a CD format `.iso`
 and you have to pull out the CD formatting with this nice utility called 
 `geteltorito`.
 
-https://workaround.org/article/updating-the-bios-on-lenovo-laptops-from-linux-using-a-USB-flash-stick/
+ - https://workaround.org/article/updating-the-bios-on-lenovo-laptops-from-linux-using-a-USB-flash-stick/
 
  # wget https://download.lenovo.com/pccbbs/mobiles/n1cur21w.iso
  # dnf install geteltorito
