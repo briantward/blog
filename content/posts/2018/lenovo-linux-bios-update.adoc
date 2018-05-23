@@ -20,9 +20,9 @@ but me.
 was here: https://pcsupport.lenovo.com/us/en/downloads/ds112118
 
 . Check out this guys's great post. You would think you could just copy the
-.iso to your usb device with `dd`, but no you cannot.  It's a CD format .iso
+`.iso` to your usb device with `dd`, but no you cannot.  It's a CD format `.iso`
 and you have to pull out the CD formatting with this nice utility called 
-`geteltorito`
+`geteltorito`.
 
 https://workaround.org/article/updating-the-bios-on-lenovo-laptops-from-linux-using-a-usb-flash-stick/
 
