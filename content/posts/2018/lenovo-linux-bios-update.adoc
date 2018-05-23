@@ -38,4 +38,4 @@ probably have lots of other problems. This command might be helpful.
 My block device for my usb stick is /dev/sdb.  So here is the dd command to
 copy the image to the ubs:
 
- # dd if=boot.img of=/dev/sdb
+ # dd if=bios.img of=/dev/sdb
