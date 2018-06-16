@@ -1,0 +1,13 @@
+---
+title: Attach a Specific Subscription Pool to a RHEL Machine
+date: 2018-06-15
+categories: ["os"]
+tags: ["rhel","subscription-manager","pool"]
+language: en
+slug: rhel-subscription-manager-pool-id
+---
+
+== Attach a Specific Subscription Pool to a RHEL Machine
+
+  subscription-manager list --all --available --matches="OpenShift Container Platform" | awk '/Pool ID/ {print $3}' | head -1
+  subscription-manager attach --pool=$(subscription-manager list --all --available --matches="OpenShift Container Platform" | awk '/Pool ID/ {print $3}' | head -1)

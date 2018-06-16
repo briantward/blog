@@ -1,0 +1,80 @@
+---
+title: Configure Dell PowerConnect PC5324
+date: 2018-06-15
+categories: ["networking"]
+tags: ["networking","dell","powerconnect","switch"]
+language: en
+slug: configure-dell-powerconnect-pc5324
+---
+
+== Configure Dell PowerConnect PC5324
+
+=== Followed help from these sites
+
+- https://www.stevejenkins.com/blog/2011/05/dell-powerconnect-5324-setup-tasks/
+- http://ninjix.blogspot.com/2013/03/dell-powerconnect-serial-console-on.html
+
+=== Tools to connect to console
+
+Minicom
+
+- can be a problem if the env variable TERM is not set correctly.
+- hit enter. then cntl-A then q then enter to exit minicom.
+
+screen 
+
+- Use the screen quit command (normally ctrl-A \).
+
+=== Steps taken
+
+. Downloaded latest firmware
+. Hosted firmware package on tftp server on main server (did not enable the service as don't expect to run it all-time)
+. Ran update commands from above links, rebooted.
+. Configured as below.
+
+=== Settings configured
+
+[source]
+----
+console> enable
+console# config
+console# interface vlan 1
+console(config-if)# ip address 192.168.1.222 /24
+console(config-if)# ip default-gateway 192.168.1.1  // this did not work, got % Unrecognized command
+console(config-if)# exit
+config(config)# exit
+console#
+
+console# copy running-config startup-config
+----
+
+ran this later, after a firmware update
+  
+ console(config-if)# ip default-gateway 192.168.1.1
+
+
+[source]
+----
+console# configure
+console(config)# clock timezone -8
+console(config)# clock summer-time recurring first Sun Apr 02:00 last Sun Oct 02:00 zone PDT
+console(config)# sntp client enable vlan 1
+console(config)# clock source sntp
+console(config)# sntp client poll timer 1024
+console(config)# sntp unicast client enable
+console(config)# sntp unicast client poll
+console(config)# sntp anycast client enable
+console(config)# sntp broadcast client enable
+console(config)# sntp server 129.6.15.28 poll   // latest IPs for NIST
+console(config)# sntp server 129.6.15.29 poll
+console(config)# sntp server 129.6.15.30 poll
+console(config)# exit
+----
+
+
+=== Dell Resources
+
+http://www.dell.com/support/home/us/en/04/product-support/product/powerconnect-5324/manuals
+http://downloads.dell.com/manuals/all-products/esuprt_ser_stor_net/esuprt_powerconnect/powerconnect-5324_user%27s%20guide_en-us.pdf
+http://downloads.dell.com/manuals/all-products/esuprt_ser_stor_net/esuprt_powerconnect/powerconnect-5324_reference%20guide_en-us.pdf
+
