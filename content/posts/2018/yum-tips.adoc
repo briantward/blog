@@ -1,0 +1,14 @@
+---
+title: YUM DNF Tips
+date: 2018-08-01
+categories: ["tips"]
+tags: ["yum","dnf"]
+language: en
+slug: yum-dnf-tips
+---
+
+== YUM and DNF Tips
+
+=== Remove all cache
+
+ $ rm -rf /var/cache/yum

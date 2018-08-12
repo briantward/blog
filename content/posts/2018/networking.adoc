@@ -9,6 +9,24 @@ slug: networking
 
 == Networking Tips
 
-- find the eth0 ip addr
+=== Find the eth0 ip addr
 
   ETH0_IP=`ifconfig eth0 2>/dev/null | awk '/inet addr:/ {print $2}' | sed 's/addr://'`
+
+=== troubleshooting NIC
+
+ # lspci -nn | grep Ethernet
+ # lspci -k -d ::0200
+
+where, +
+-nn: Show PCI vendor and device codes as both numbers and names. +
+-k: Show driver information for a device. +
+-d: Filter on just the 'Ethernet' device class (0200)  
+
+=== Check Kernel module load
+ 
+ # dmesg | grep e1000e
+
+(kernel module e1000e found above)
+
+ # lsmod | grep <module name>

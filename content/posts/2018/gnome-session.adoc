@@ -1,0 +1,26 @@
+---
+title: Gnome Session
+date: 2018-08-05
+categories: ["tips"]
+tags: ["gnome","session","wayland","xorg"]
+language: en
+slug: gnome-session
+---
+
+== Gnome Session
+
+=== Show whether you are on wayland or x11:
+
+ $ loginctl show-session $(loginctl | grep $(whoami) | awk '{print $1}') -p Type
+
+or 
+
+ $ echo $XDG_SESSION_TYPE
+
+=== Switch gui terminal
+
+ ctrl + alt + f1
+
+=== Restart
+
+You can restart the gnome-shell by pressing Alt+F2 and then typing in either "restart" or just "r" and pressing enter.

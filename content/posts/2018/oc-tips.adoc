@@ -1,0 +1,15 @@
+---
+title: oc Tips
+date: 2018-08-11
+categories: ["tips"]
+tags: ["oc"]
+language: en
+slug: oc-tips
+---
+
+== OC Command Tips
+
+ $ oc login -u system:admin
+
+ $ oc whoami --config=$HOME/.kube/config
+

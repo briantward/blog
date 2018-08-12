@@ -1,0 +1,18 @@
+---
+title: SSH Tips
+date: 2018-08-11
+categories: ["tips"]
+tags: ["ssh","tunnel","keygen"]
+language: en
+slug: ssh-tips
+---
+
+== SSH Tips
+
+=== SSH Tunnel
+ 
+ $ ssh user@remote-host -L 9993:remote-host:9993
+
+=== SSH Keyen
+
+ $ ssh-keygen -t rsa -b 4096 -C "email organization"

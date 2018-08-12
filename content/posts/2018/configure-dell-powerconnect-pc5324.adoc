@@ -74,7 +74,9 @@ console(config)# exit
 
 === Dell Resources
 
-http://www.dell.com/support/home/us/en/04/product-support/product/powerconnect-5324/manuals
-http://downloads.dell.com/manuals/all-products/esuprt_ser_stor_net/esuprt_powerconnect/powerconnect-5324_user%27s%20guide_en-us.pdf
-http://downloads.dell.com/manuals/all-products/esuprt_ser_stor_net/esuprt_powerconnect/powerconnect-5324_reference%20guide_en-us.pdf
+- http://www.dell.com/support/home/us/en/04/product-support/product/powerconnect-5324/manuals
+
+- http://downloads.dell.com/manuals/all-products/esuprt_ser_stor_net/esuprt_powerconnect/powerconnect-5324_user%27s%20guide_en-us.pdf
+
+- http://downloads.dell.com/manuals/all-products/esuprt_ser_stor_net/esuprt_powerconnect/powerconnect-5324_reference%20guide_en-us.pdf
 

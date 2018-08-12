@@ -1,0 +1,43 @@
+---
+title: Java on RHEL / Centos / Fedora
+date: 2018-08-10
+categories: ["tips"]
+tags: ["java","rhel","fedora"]
+language: en
+slug: java-on-rhel
+---
+
+== Java on RHEL / Centos / Fedora
+
+
+[source]
+----
+$ ls -lah /usr/lib/jvm
+total 20K
+drwxr-xr-x.  5 root root 4.0K Jul 30 09:56 .
+dr-xr-xr-x. 51 root root 4.0K Jul 20 12:02 ..
+lrwxrwxrwx.  1 root root   26 Jul 30 09:56 java -> /etc/alternatives/java_sdk
+lrwxrwxrwx.  1 root root   32 Jul 30 09:56 java-1.8.0 -> /etc/alternatives/java_sdk_1.8.0
+lrwxrwxrwx.  1 root root   40 Jul 30 09:56 java-1.8.0-openjdk -> /etc/alternatives/java_sdk_1.8.0_openjdk
+drwxr-xr-x.  3 root root 4.0K Mar 29 10:21 java-1.8.0-openjdk-1.8.0.162-3.b12.fc28.x86_64
+drwxr-xr-x.  7 root root 4.0K Jul 30 09:55 java-1.8.0-openjdk-1.8.0.181-7.b13.fc28.x86_64
+drwxr-xr-x.  7 root root 4.0K Jul 30 09:55 java-1.8.0-openjdk-1.8.0.181-7.b13.fc28.x86_64-debug
+lrwxrwxrwx.  1 root root   34 Jul 30 09:56 java-openjdk -> /etc/alternatives/java_sdk_openjdk
+lrwxrwxrwx.  1 root root   21 Jul 30 09:56 jre -> /etc/alternatives/jre
+lrwxrwxrwx.  1 root root   27 Jul 30 09:56 jre-1.8.0 -> /etc/alternatives/jre_1.8.0
+lrwxrwxrwx.  1 root root   35 Jul 30 09:56 jre-1.8.0-openjdk -> /etc/alternatives/jre_1.8.0_openjdk
+lrwxrwxrwx.  1 root root   50 Jul 23 12:19 jre-1.8.0-openjdk-1.8.0.181-7.b13.fc28.x86_64 -> java-1.8.0-openjdk-1.8.0.181-7.b13.fc28.x86_64/jre
+lrwxrwxrwx.  1 root root   56 Jul 23 12:20 jre-1.8.0-openjdk-1.8.0.181-7.b13.fc28.x86_64-debug -> java-1.8.0-openjdk-1.8.0.181-7.b13.fc28.x86_64-debug/jre
+----
+
+[source]
+----
+$ sudo alternatives --config java
+
+There are 2 programs which provide 'java'.
+
+  Selection    Command
+ -----------------------------------------------
+   1           java-1.8.0-openjdk.x86_64 (/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.181-7.b13.fc28.x86_64-debug/jre/bin/java)
+*+ 2           java-1.8.0-openjdk.x86_64 (/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.181-7.b13.fc28.x86_64/jre/bin/java)
+----
