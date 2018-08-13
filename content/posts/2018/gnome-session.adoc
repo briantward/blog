@@ -24,3 +24,30 @@ or
 === Restart
 
 You can restart the gnome-shell by pressing Alt+F2 and then typing in either "restart" or just "r" and pressing enter.
+
+=== Software Center History
+
+This app, ``gnome-software``  is sorta nice in its GUI flashiness and reminds me of Apple app store.  Wouldn't it be nice to see my history of installations through this tool?  In the backend it apparently uses PackageKit.  What is odd though is that it doesn't record history through the dnf tool.  So all my command line history is captured but none of the GUI installs are captured.  If you need to see packages by installation you need to run through some RPM commands.  You might also have this problem when installing RPMs directly, without DNF.
+
+Show DNF history:
+
+ # dnf history
+
+Show last install date:
+
+ $ rpm -qa --last
+
+Show packages installed, with installation repository:
+
+ # dnf list installed
+
+Find packages installed by command line, without DNF:
+
+ $ dnf list installed | grep commandline
+
+Find all packages installed by user, whether through DNF or ``gnome-software``:
+
+ # dnf history userinstalled
+
+Note that this bug is tracking the fact that ``gnome-software`` and ``PackageKit`` are not using the DNF history database: 
+https://bugzilla.redhat.com/show_bug.cgi?id=1277115.  Though it is marked as a duplicate and closed, I suspect it is a different issue that still needs to be resolved.
