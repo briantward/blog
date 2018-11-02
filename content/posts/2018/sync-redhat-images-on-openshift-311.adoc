@@ -1,16 +1,16 @@
 ---
-title: Sync Red Hat Container Images on OpenShift 
-date: 2018-07-25
+title: Automatically Update Red Hat Container Images on OpenShift 3.11
+date: 2018-11-01
 categories: ["openshift"]
 tags: ["sync","Red Hat","container","imagestream"]
 language: en
-slug: sync-redhat-images-on-openshift
+slug: sync-redhat-images-on-openshift-311
 ---
 
-== Sync Red Hat Container Images on OpenShift
+== Automatically Update Red Hat Container Images on OpenShift 3.11
 
-If using the default Advanced Installer, and setting the flag to deploy openshift_install_examples footnote:[https://github.com/openshift/openshift-ansible/blob/master/inventory/hosts.example#L89] in your cluster (or using the default which is true), you will find that 
-the ansible installer adds some nice stuff to your local registry from the openshift_examples footnoteref:[openshift_examples_repo, https://github.com/openshift/openshift-ansible/tree/master/roles/openshift_examples] folder.
+When using the OpenShift Ansible (Advanced) Installer, you will find that by default
+the installer adds some ImageStreams to your ``openshift`` project namespace from the openshift_examples footnoteref:[openshift_examples_repo, https://github.com/openshift/openshift-ansible/tree/master/roles/openshift_examples] folder.  These are just a sampling of what you can find in the full Red Hat Container Catalog online footnote:[https://access.redhat.com/containers/].
 
 [source]
 $ oc get is -n openshift
@@ -56,21 +56,33 @@ imagestreams/redhat-sso72-openshift                docker-registry.default.svc:5
 imagestreams/redis                                 docker-registry.default.svc:5000/openshift/redis                                 3.2,latest                     21 hours ago
 imagestreams/ruby                                  docker-registry.default.svc:5000/openshift/ruby                                  latest,2.2,2.3 + 2 more...     21 hours ago
 
-Your list may look a little different, and this list may include more than the default from openshift_examples.
+Note: Your list may look a little different, and this list may include more than the default from openshift_examples.
 
-Along the way, you may notice that those images never update.  Months go by, and you realize that you are on old containers.  
+Along the way, you may notice that those images never update.  Months go by, and you realize that you are running old containers.  
 Note on the right hand side of the output above that most of these images have
 not been updated in 3-4 months!  A couple of them have been updated manually in a more recent time frame.
 One day you ask yourself,
-why?  Well, by default we don't want to push people into making changes they aren't thinking about.  Ideally you have a security pipeline to push base images to 
-production as quickly as possible, separate from any development pipelines.  Hopefully that's a fully automated pipeline.  Why not?  After all that's the whole purpose 
-of the platform!
+why?  Well, by default we don't want to push people into making changes they aren't thinking about. So this is the default behavior. 
 
-Here are a few steps to get you going toward automatic updates.
+However, OpenShift can handle the management of checking for latest updates to base images (ImageStreams) and allowing such events to trigger other new builds.  Here are a few steps to get you going toward automatic container image updates on OpenShift.
 
 === Configure imagePolicyConfig in the Master Config to Run a Scheduled Import Process
 
-First, you need to set your ImagePolicyConfig on your masters to handle an update schedule. In your /etc/origin/master/master-config.yaml file it should look like this:
+First, you need to set your ImagePolicyConfig on your masters to handle an update schedule. Again, note that the default setting does not have the scheduled import on!
+
+Set these variables in your OpenShift Ansible Installer inventory file footnote:[https://github.com/openshift/openshift-ansible/blob/master/inventory/hosts.example#L103]:
+
+[source]
+----
+openshift_master_image_policy_config={"maxImagesBulkImportedPerRepository": 3, "disableScheduledImport": false, "MaxScheduledImageImportsPerMinute": 10, "ScheduledImageImportMinimumIntervalSeconds": 1800}
+----
+
+Then run the playbook to just update your master configs:
+
+ # ansible-playbook -i /etc/ansible/hosts /usr/share/ansible/openshift-ansible/playbooks/byo/openshift-master/config.yml
+
+
+To do this manually without the ansible playbook, on each master node, add or edit the following in your /etc/origin/master/master-config.yaml:
 
 [source]
 imagePolicyConfig:
@@ -81,35 +93,26 @@ imagePolicyConfig:
 
 Be sure to restart services on each master after your update:
 
+On OpenShift <= 3.9:
+
  # systemctl restart atomic-openshift-master-api
 
-If you are setting these variables in your Advanced Installer inventory file footnote:[https://github.com/openshift/openshift-ansible/blob/master/inventory/hosts.example#L103] it would look like this:
+On OpenShift >= 3.10:
 
-[source]
-----
-# Configure imagePolicyConfig in the master config
-# See: https://godoc.org/github.com/openshift/origin/pkg/cmd/server/api#ImagePolicyConfig
-#openshift_master_image_policy_config={"maxImagesBulkImportedPerRepository": 3, "disableScheduledImport": true}
-openshift_master_image_policy_config={"maxImagesBulkImportedPerRepository": 3, "disableScheduledImport": false, "MaxScheduledImageImportsPerMinute": 10, "ScheduledImageImportMinimumIntervalSeconds": 1800}
-----
+ # master-restart api
+ # master-restart controllers
 
-Then run the playbook to just update your master configs:
-
- # ansible-playbook -i /etc/ansible/hosts /usr/share/ansible/openshift-ansible/playbooks/byo/openshift-master/config.yml
-
-Note that the default setting does not have the scheduled import on!
   
 === Configure Existing ImageStreams to Update Automatically
 
-Second, you need to update all your imagestreams to automatically update.  Note that the openshift_examples installed
-by the Advanced Installer only install into your OpenShift environment ONCE.  They never get updated.  If new templates
+Second, you need to update all your ImageStreams to automatically update.  Note that the openshift_examples installed
+by the OpenShift Ansible Installer only install into your OpenShift environment ONCE.  They never get updated.  If new templates
 arrive in subsequent updates, they do get added, and some get removed. But they never get updated! footnoteref:[openshift_examples_repo] Here is how to change that.
 
-
-To perform this operation on all imagestreams in the ``openshift`` namespace:
+To perform this operation on all ImageStreams in the ``openshift`` namespace using a CLI json editor tool, ``jq``:
 
 [source]
-$ oc get is -n openshift > openshift-is.json
+$ oc get is -n openshift -o json > openshift-is.json
 $ jq '.items[].spec.tags[]? |= if .from.kind == "DockerImage" then .importPolicy.scheduled |= true else . end' openshift-is.json > openshift-is-scheduled.json
 $ oc apply -f openshift-is-scheduled.json -n openshift
 
@@ -117,16 +120,15 @@ To perform this operation on just one imagestream, in this example the Redis 3.2
 
  $ oc patch is redis -p '{"spec":{"tags":[{"name":"3.2","importPolicy":{"scheduled":true}}]}}'
 
-Note that the tag "name" must be of kind "DockerImage" and not "ImageStreamTag"!  Also note that once you apply the scheduled update to
-one tag, it will update all tags.  
+Notes
+
+- The tag "name" must be of kind "DockerImage" and not "ImageStreamTag"!  
+- Once you apply the scheduled update to one tag, it will update all tags on the same object.
+- The final ``oc apply`` command above may output some errors about yaml formats. Ignore them, it gets the job done. 
 
 === Configure New ImageStreams to Update Automatically
 
-Third, every time a new imagestream is created, you should evaluate whether you want it to automatically update or not.  Think of the build implications.
-Many BuildConfigs trigger on image update.  This can be great in a development environment or an automated pipeline where validation tests run.  You may not, 
-however, want to trigger a new build and deploy directly on production. 
-
-When performing an ``import-image`` or ``oc tag`` into any namespace, be sure to specify the flag ``--scheduled=true`` :
+Third, when working with ImageStreams, performing an ``import-image`` or ``oc tag`` into any namespace, be sure to specify the flag ``--scheduled=true`` :
 
 [source]
 ----
@@ -291,24 +293,17 @@ metadata:
   selfLink: ""
 ----
 
-
 For further reading:
 
-Managing Automatic ImageStream Updates in OpenShift
-
-https://docs.openshift.com/container-platform/3.9/install_config/install/advanced_install.html
-
 Image Configuration Parameters
-https://docs.openshift.com/container-platform/3.9/install_config/master_node_configuration.html#master-config-image-config
 
-https://docs.openshift.com/container-platform/3.9/admin_guide/image_policy.html
-
-See imagePolicyConfig on 
-https://docs.openshift.com/container-platform/3.9/admin_solutions/master_node_config.html
+ - https://docs.openshift.com/container-platform/3.11/install_config/master_node_configuration.html#master-config-image-config
+ - https://docs.openshift.com/container-platform/3.11/admin_guide/image_policy.html
 
 See --scheduled=true flag on 
-https://docs.openshift.com/container-platform/3.9/dev_guide/managing_images.html#adding-tag
-https://docs.openshift.com/container-platform/3.9/dev_guide/managing_images.html#importing-tag-and-image-metadata
+
+ - https://docs.openshift.com/container-platform/3.11/dev_guide/managing_images.html#adding-tag
+ - https://docs.openshift.com/container-platform/3.11/dev_guide/managing_images.html#importing-tag-and-image-metadata
 
 
 
