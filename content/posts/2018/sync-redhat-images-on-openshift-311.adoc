@@ -74,7 +74,7 @@ Set these variables in your OpenShift Ansible Installer inventory file footnote:
 
 [source]
 ----
-openshift_master_image_policy_config={"maxImagesBulkImportedPerRepository": 3, "disableScheduledImport": false, "MaxScheduledImageImportsPerMinute": 10, "ScheduledImageImportMinimumIntervalSeconds": 1800}
+openshift_master_image_policy_config={"MaxImagesBulkImportedPerRepository": "3", "DisableScheduledImport": "false", "MaxScheduledImageImportsPerMinute": "10", "ScheduledImageImportMinimumIntervalSeconds": "1800"}
 ----
 
 Then run the playbook to just update your master configs:
