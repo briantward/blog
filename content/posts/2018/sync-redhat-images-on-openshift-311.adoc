@@ -13,7 +13,7 @@ When using the OpenShift Ansible (Advanced) Installer, you will find that by def
 the installer adds some ImageStreams to your ``openshift`` project namespace from the openshift_examples footnoteref:[openshift_examples_repo, https://github.com/openshift/openshift-ansible/tree/master/roles/openshift_examples] folder.  These are just a sampling of what you can find in the full Red Hat Container Catalog online footnote:[https://access.redhat.com/containers/].
 
 [source]
-$ oc get is -n openshift
+$ oc get imagestream -n openshift
 NAME                                               DOCKER REPO                                                                      TAGS                           UPDATED
 imagestreams/eap71-openshift                       docker-registry.default.svc:5000/openshift/eap71-openshift                       latest                         3 months ago
 imagestreams/httpd                                 docker-registry.default.svc:5000/openshift/httpd                                 2.4,latest                     4 months ago
@@ -38,7 +38,7 @@ imagestreams/jboss-webserver30-tomcat8-openshift   docker-registry.default.svc:5
 imagestreams/jboss-webserver31-tomcat7-openshift   docker-registry.default.svc:5000/openshift/jboss-webserver31-tomcat7-openshift   1.0,1.1                        3 months ago
 imagestreams/jboss-webserver31-tomcat8-openshift   docker-registry.default.svc:5000/openshift/jboss-webserver31-tomcat8-openshift   1.0,1.1                        3 months ago
 imagestreams/jenkins                               docker-registry.default.svc:5000/openshift/jenkins                               v3.5,v3.6,v3.7 + 2 more...     4 months ago
-imagestreams/jenkins-slave-base-rhel7              registry.access.redhat.com/openshift3/jenkins-slave-base-rhel7                   latest,v3.4,v3.5 + 2 more...   4 months ago
+imagestreams/jenkins-slave-base-rhel7              registry.redhat.io/openshift3/jenkins-slave-base-rhel7                   latest,v3.4,v3.5 + 2 more...   4 months ago
 imagestreams/jenkins-slave-image-mgmt              docker-registry.default.svc:5000/openshift/jenkins-slave-image-mgmt              latest                         4 months ago
 imagestreams/jenkins2-s2i                          docker-registry.default.svc:5000/openshift/jenkins2-s2i                          latest                         4 months ago
 imagestreams/mariadb                               docker-registry.default.svc:5000/openshift/mariadb                               10.1,latest                    4 months ago
@@ -63,6 +63,7 @@ Note on the right hand side of the output above that most of these images have
 not been updated in 3-4 months!  A couple of them have been updated manually in a more recent time frame.
 One day you ask yourself,
 why?  Well, by default we don't want to push people into making changes they aren't thinking about. So this is the default behavior. 
+There are also concerns over supported and tested configurations footnote:[https://access.redhat.com/articles/2176281].
 
 However, OpenShift can handle the management of checking for latest updates to base images (ImageStreams) and allowing such events to trigger other new builds.  Here are a few steps to get you going toward automatic container image updates on OpenShift.
 
@@ -93,11 +94,11 @@ imagePolicyConfig:
 
 Be sure to restart services on each master after your update:
 
-On OpenShift <= 3.9:
+On OpenShift < = 3.9:
 
  # systemctl restart atomic-openshift-master-api
 
-On OpenShift >= 3.10:
+On OpenShift > = 3.10:
 
  # master-restart api
  # master-restart controllers
@@ -133,7 +134,7 @@ Third, when working with ImageStreams, performing an ``import-image`` or ``oc ta
 [source]
 ----
 $ oc new-project test
-Now using project "test" on server "https://openshift.opencontainer.io:8443".
+Now using project "test" on server "https://openshift.example.com:8443".
 
 You can add applications to this project with the 'new-app' command. For example, try:
 
@@ -142,34 +143,51 @@ You can add applications to this project with the 'new-app' command. For example
 to build a new example application in Ruby.
 ----
 
+The latest version as of this writing, 3.11, uses an authenticated Red Hat registry at registry.redhat.io footnote:[https://docs.openshift.com/container-platform/3.11/install_config/configuring_red_hat_registry.html].
+
+Copy your auth token from the ``openshift`` namespace just for this test.  OpenShift versions prior to 3.11 don't need this (yet).
+
 [source]
 ----
-$ oc import-image ruby --from=registry.access.redhat.com/rhscl/ruby-25-rhel7 --confirm --scheduled=true
-The import completed successfully.
+$ oc get secret imagestreamsecret -n openshift --export -o yaml | oc create -f- -n test
+secret/imagestreamsecret created
+----
+
+Now import an image with the ``-scheduled=true`` flag.
+
+[source]
+----
+$ oc import-image ruby --from=registry.redhat.io/rhscl/ruby-25-rhel7 --confirm --scheduled=true
+imagestream.image.openshift.io/ruby imported
 
 Name:			ruby
 Namespace:		test
-Created:		Less than a second ago
+Created:		12 minutes ago
 Labels:			<none>
-Annotations:		openshift.io/image.dockerRepositoryCheck=2018-07-25T17:44:23Z
+Annotations:		openshift.io/image.dockerRepositoryCheck=2018-11-12T21:36:36Z
 Docker Pull Spec:	docker-registry.default.svc:5000/test/ruby
 Image Lookup:		local=false
 Unique Images:		1
 Tags:			1
 
 latest
-  updates automatically from registry registry.access.redhat.com/rhscl/ruby-25-rhel7
+  updates automatically from registry registry.redhat.io/rhscl/ruby-25-rhel7
 
-  * registry.access.redhat.com/rhscl/ruby-25-rhel7@sha256:0abd18c56a95d7bd181aa9945e44ff6c99e69d9241e61fa3efc5292a64d63850
+  * registry.redhat.io/rhscl/ruby-25-rhel7@sha256:88b5a4ae11075034ef05eed69b17a5527eb44ae1352e660d02df96394eb258d7
       Less than a second ago
 
 Image Name:	ruby:latest
-Docker Image:	registry.access.redhat.com/rhscl/ruby-25-rhel7@sha256:0abd18c56a95d7bd181aa9945e44ff6c99e69d9241e61fa3efc5292a64d63850
-Name:		sha256:0abd18c56a95d7bd181aa9945e44ff6c99e69d9241e61fa3efc5292a64d63850
+Docker Image:	registry.redhat.io/rhscl/ruby-25-rhel7@sha256:88b5a4ae11075034ef05eed69b17a5527eb44ae1352e660d02df96394eb258d7
+Name:		sha256:88b5a4ae11075034ef05eed69b17a5527eb44ae1352e660d02df96394eb258d7
 Created:	Less than a second ago
 Annotations:	image.openshift.io/dockerLayersOrder=ascending
-Image Size:	179.7 MB (first layer 74.92 MB, last binary layer 13.46 MB)
-Image Created:	7 days ago
+Image Size:	182.7MB in 5 layers
+Layers:		75.72MB	sha256:9a1bea865f798d0e4f2359bd39ec69110369e3a1131aba6eb3cbf48707fdf92d
+		1.237kB	sha256:602125c154e3e132db63d8e6479c5c93a64cbfd3a5ced509de73891ff7102643
+		6.787MB	sha256:587a812f9444e67d0ca2750117dbff4c97dd83a07e6c8c0eb33b3b0b7487773f
+		86.37MB	sha256:12829a4d5978f41e39c006c78f2ecfcd91011f55d7d8c9db223f9459db817e48
+		13.77MB	sha256:001d9a43195ba977e8d28f9bc5c3aaed530d43790bdda1542c01c2a248ce22ea
+Image Created:	2 weeks ago
 Author:		<none>
 Arch:		amd64
 Entrypoint:	container-entrypoint
@@ -179,8 +197,8 @@ User:		1001
 Exposes Ports:	8080/tcp
 Docker Labels:	architecture=x86_64
 		authoritative-source-url=registry.access.redhat.com
-		build-date=2018-07-17T20:14:40.471108
-		com.redhat.build-host=osbs-cpt-007.ocp.osbs.upshift.eng.rdu2.redhat.com
+		build-date=2018-10-25T11:08:38.127442
+		com.redhat.build-host=cpt-0012.osbs.prod.upshift.rdu2.redhat.com
 		com.redhat.component=rh-ruby25-container
 		description=Ruby 2.5 available as container is a base platform for building and running various Ruby 2.5 applications and frameworks. Ruby is the interpreted scripting language for quick and easy object-oriented programming. It has many features to process text files and to do system management tasks (as in Perl). It is simple, straight-forward, and extensible.
 		distribution-scope=public
@@ -192,11 +210,11 @@ Docker Labels:	architecture=x86_64
 		io.s2i.scripts-url=image:///usr/libexec/s2i
 		maintainer=SoftwareCollections.org <sclorg@redhat.com>
 		name=rhscl/ruby-25-rhel7
-		release=13
+		release=23
 		summary=Platform for building and running Ruby 2.5 applications
-		url=https://access.redhat.com/containers/#/registry.access.redhat.com/rhscl/ruby-25-rhel7/images/2.5-13
+		url=https://access.redhat.com/containers/#/registry.access.redhat.com/rhscl/ruby-25-rhel7/images/2.5-23
 		usage=s2i build https://github.com/sclorg/s2i-ruby-container.git --context-dir=2.5/test/puma-test-app/ rhscl/ruby-25-rhel7 ruby-sample-app
-		vcs-ref=d42ce6d49fe8f63d48e5f54c3e8ca9f64f9c0516
+		vcs-ref=8185c33a256c005246ad121a3f81cc3a2700422c
 		vcs-type=git
 		vendor=Red Hat, Inc.
 		version=2.5
@@ -218,33 +236,36 @@ Environment:	PATH=/opt/app-root/src/bin:/opt/app-root/bin:/usr/local/sbin:/usr/l
 		RUBY_SCL_NAME_VERSION=25
 		RUBY_SCL=rh-ruby25
 		IMAGE_NAME=rhscl/ruby-25-rhel7
+
+
+
 ----
 
 [source]
 ----
 $ oc get is
 NAME      DOCKER REPO                                  TAGS      UPDATED
-ruby      docker-registry.default.svc:5000/test/ruby   latest    35 seconds ago
+ruby      docker-registry.default.svc:5000/test/ruby   latest    8 minutes ago
 ----
 
 [source]
----- 
+----
 $ oc describe is ruby
 Name:			ruby
 Namespace:		test
-Created:		2 minutes ago
+Created:		21 minutes ago
 Labels:			<none>
-Annotations:		openshift.io/image.dockerRepositoryCheck=2018-07-25T17:44:23Z
+Annotations:		openshift.io/image.dockerRepositoryCheck=2018-11-12T21:36:36Z
 Docker Pull Spec:	docker-registry.default.svc:5000/test/ruby
 Image Lookup:		local=false
 Unique Images:		1
 Tags:			1
 
 latest
-  updates automatically from registry registry.access.redhat.com/rhscl/ruby-25-rhel7
+  updates automatically from registry registry.redhat.io/rhscl/ruby-25-rhel7
 
-  * registry.access.redhat.com/rhscl/ruby-25-rhel7@sha256:0abd18c56a95d7bd181aa9945e44ff6c99e69d9241e61fa3efc5292a64d63850
-      2 minutes ago
+  * registry.redhat.io/rhscl/ruby-25-rhel7@sha256:88b5a4ae11075034ef05eed69b17a5527eb44ae1352e660d02df96394eb258d7
+      9 minutes ago
 ----
 
 [source]
@@ -252,18 +273,18 @@ latest
 $ oc get is -o yaml
 apiVersion: v1
 items:
-- apiVersion: v1
+- apiVersion: image.openshift.io/v1
   kind: ImageStream
   metadata:
     annotations:
-      openshift.io/image.dockerRepositoryCheck: 2018-07-25T17:44:23Z
-    creationTimestamp: 2018-07-25T17:44:23Z
-    generation: 1
+      openshift.io/image.dockerRepositoryCheck: 2018-11-12T21:36:36Z
+    creationTimestamp: 2018-11-12T21:23:59Z
+    generation: 2
     name: ruby
     namespace: test
-    resourceVersion: "37153060"
-    selfLink: /oapi/v1/namespaces/test/imagestreams/ruby
-    uid: 5e0e659f-9032-11e8-a295-001a4a160161
+    resourceVersion: "59600467"
+    selfLink: /apis/image.openshift.io/v1/namespaces/test/imagestreams/ruby
+    uid: 45324578-e6c1-11e8-a78a-001a4a160160
   spec:
     lookupPolicy:
       local: false
@@ -271,8 +292,8 @@ items:
     - annotations: null
       from:
         kind: DockerImage
-        name: registry.access.redhat.com/rhscl/ruby-25-rhel7
-      generation: 1
+        name: registry.redhat.io/rhscl/ruby-25-rhel7
+      generation: 2
       importPolicy:
         scheduled: true
       name: latest
@@ -282,10 +303,10 @@ items:
     dockerImageRepository: docker-registry.default.svc:5000/test/ruby
     tags:
     - items:
-      - created: 2018-07-25T17:44:23Z
-        dockerImageReference: registry.access.redhat.com/rhscl/ruby-25-rhel7@sha256:0abd18c56a95d7bd181aa9945e44ff6c99e69d9241e61fa3efc5292a64d63850
-        generation: 1
-        image: sha256:0abd18c56a95d7bd181aa9945e44ff6c99e69d9241e61fa3efc5292a64d63850
+      - created: 2018-11-12T21:36:36Z
+        dockerImageReference: registry.redhat.io/rhscl/ruby-25-rhel7@sha256:88b5a4ae11075034ef05eed69b17a5527eb44ae1352e660d02df96394eb258d7
+        generation: 2
+        image: sha256:88b5a4ae11075034ef05eed69b17a5527eb44ae1352e660d02df96394eb258d7
       tag: latest
 kind: List
 metadata:
