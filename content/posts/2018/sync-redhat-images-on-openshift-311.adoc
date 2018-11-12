@@ -305,5 +305,8 @@ See --scheduled=true flag on
  - https://docs.openshift.com/container-platform/3.11/dev_guide/managing_images.html#adding-tag
  - https://docs.openshift.com/container-platform/3.11/dev_guide/managing_images.html#importing-tag-and-image-metadata
 
+For officially supported configurations:
+
+ - https://access.redhat.com/articles/2176281
 
 
