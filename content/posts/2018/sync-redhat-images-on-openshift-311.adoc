@@ -9,38 +9,33 @@ slug: sync-redhat-images-on-openshift-311
 
 == Automatically Update Red Hat Container Images on OpenShift 3.11
 
+OpenShift manages container images using a registry.  This is the place where it caches upstream container images and stores the images from your own builds as well.  
+Each build or container image correlates to an ImageStream, which is an object that defines any number of related images by tags.  For example,
+one specific version of a Ruby container might be v2.5-22, but you can have one ImageStream definition that holds ruby tags and correlating images for v2.5, v2.4, v2.3 and so on.
+
+At Red Hat's Online Container Catalog, searching for Ruby brings up the following for the 2.5 release:
+
+image:/images/sync-redhat-images/ruby-list.png[]
+
+You can also see that the Container Catalog tracks the latest release history and details:
+
+image:/images/sync-redhat-images/ruby-list-details.png[]
+
 When using the OpenShift Ansible (Advanced) Installer, you will find that by default
-the installer adds some ImageStreams to your ``openshift`` project namespace from the openshift_examples footnoteref:[openshift_examples_repo, https://github.com/openshift/openshift-ansible/tree/master/roles/openshift_examples] folder.  These are just a sampling of what you can find in the full Red Hat Container Catalog online footnote:[https://access.redhat.com/containers/].
+the installer adds some useful ImageStreams to your ``openshift`` project namespace from the openshift_examples footnoteref:[openshift_examples_repo, https://github.com/openshift/openshift-ansible/tree/master/roles/openshift_examples] folder.  Examples include the all-powerful Apache httpd, a useful Jenkins CI/CD server, a few scripting languages, and a few databases among many others.  These are just a sampling of what you can find in the full Red Hat Container Catalog online footnote:[https://access.redhat.com/containers/].
+
+When you deploy the Red Hat Container Registry, either as a part of your OpenShift cluster or external to it, you will get a web console where you can take a peak at what ImageStreams and container images you have in your registry.  Here is an example of the corresponding Ruby ImageStream.  Note that it has several tags for different major.minor versions.  As a part of normal security and development, any one of those major.minor versions might get a new release at any time.  You can see when each was last updated in the far right column.  
+
+image:/images/sync-redhat-images/registry.png[]
+footnote:[https://docs.openshift.com/container-platform/3.11/install_config/registry/deploy_registry_existing_clusters.html#registry-console]
+
+From the console, you can pull some details as well.
 
 [source]
-$ oc get imagestream -n openshift
+$ oc get is -n openshift
 NAME                                               DOCKER REPO                                                                      TAGS                           UPDATED
-imagestreams/eap71-openshift                       docker-registry.default.svc:5000/openshift/eap71-openshift                       latest                         3 months ago
 imagestreams/httpd                                 docker-registry.default.svc:5000/openshift/httpd                                 2.4,latest                     4 months ago
-imagestreams/jboss-amq-62                          docker-registry.default.svc:5000/openshift/jboss-amq-62                          1.1,1.2,1.3 + 4 more...        3 months ago
-imagestreams/jboss-amq-63                          docker-registry.default.svc:5000/openshift/jboss-amq-63                          1.2,1.3,1.0 + 1 more...        3 months ago
-imagestreams/jboss-datagrid65-client-openshift     docker-registry.default.svc:5000/openshift/jboss-datagrid65-client-openshift     1.1,1.0                        3 months ago
-imagestreams/jboss-datagrid65-openshift            docker-registry.default.svc:5000/openshift/jboss-datagrid65-openshift            1.2,1.3,1.4 + 2 more...        3 months ago
-imagestreams/jboss-datagrid71-client-openshift     docker-registry.default.svc:5000/openshift/jboss-datagrid71-client-openshift     1.0                            3 months ago
-imagestreams/jboss-datagrid71-openshift            docker-registry.default.svc:5000/openshift/jboss-datagrid71-openshift            1.0,1.1,1.2                    3 months ago
-imagestreams/jboss-datavirt63-driver-openshift     docker-registry.default.svc:5000/openshift/jboss-datavirt63-driver-openshift     1.0,1.1                        3 months ago
-imagestreams/jboss-datavirt63-openshift            docker-registry.default.svc:5000/openshift/jboss-datavirt63-openshift            1.3,1.4,1.0 + 2 more...        3 months ago
-imagestreams/jboss-decisionserver62-openshift      docker-registry.default.svc:5000/openshift/jboss-decisionserver62-openshift      1.2                            3 months ago
-imagestreams/jboss-decisionserver63-openshift      docker-registry.default.svc:5000/openshift/jboss-decisionserver63-openshift      1.3,1.4                        3 months ago
-imagestreams/jboss-decisionserver64-openshift      docker-registry.default.svc:5000/openshift/jboss-decisionserver64-openshift      1.0,1.1,1.2                    3 months ago
-imagestreams/jboss-eap64-openshift                 docker-registry.default.svc:5000/openshift/jboss-eap64-openshift                 1.6,1.7,1.1 + 4 more...        3 months ago
-imagestreams/jboss-eap70-openshift                 docker-registry.default.svc:5000/openshift/jboss-eap70-openshift                 1.4,1.5,1.6 + 2 more...        3 months ago
-imagestreams/jboss-eap71-openshift                 docker-registry.default.svc:5000/openshift/jboss-eap71-openshift                 1.1,TP,1.0-TP                  3 months ago
-imagestreams/jboss-processserver63-openshift       docker-registry.default.svc:5000/openshift/jboss-processserver63-openshift       1.3,1.4                        3 months ago
-imagestreams/jboss-processserver64-openshift       docker-registry.default.svc:5000/openshift/jboss-processserver64-openshift       1.1,1.2,1.0                    3 months ago
-imagestreams/jboss-webserver30-tomcat7-openshift   docker-registry.default.svc:5000/openshift/jboss-webserver30-tomcat7-openshift   1.3,1.1,1.2                    3 months ago
-imagestreams/jboss-webserver30-tomcat8-openshift   docker-registry.default.svc:5000/openshift/jboss-webserver30-tomcat8-openshift   1.1,1.2,1.3                    3 months ago
-imagestreams/jboss-webserver31-tomcat7-openshift   docker-registry.default.svc:5000/openshift/jboss-webserver31-tomcat7-openshift   1.0,1.1                        3 months ago
-imagestreams/jboss-webserver31-tomcat8-openshift   docker-registry.default.svc:5000/openshift/jboss-webserver31-tomcat8-openshift   1.0,1.1                        3 months ago
 imagestreams/jenkins                               docker-registry.default.svc:5000/openshift/jenkins                               v3.5,v3.6,v3.7 + 2 more...     4 months ago
-imagestreams/jenkins-slave-base-rhel7              registry.redhat.io/openshift3/jenkins-slave-base-rhel7                   latest,v3.4,v3.5 + 2 more...   4 months ago
-imagestreams/jenkins-slave-image-mgmt              docker-registry.default.svc:5000/openshift/jenkins-slave-image-mgmt              latest                         4 months ago
-imagestreams/jenkins2-s2i                          docker-registry.default.svc:5000/openshift/jenkins2-s2i                          latest                         4 months ago
 imagestreams/mariadb                               docker-registry.default.svc:5000/openshift/mariadb                               10.1,latest                    4 months ago
 imagestreams/mongodb                               docker-registry.default.svc:5000/openshift/mongodb                               3.2,latest,2.4 + 1 more...     4 months ago
 imagestreams/mysql                                 docker-registry.default.svc:5000/openshift/mysql                                 5.5,5.6,5.7 + 1 more...        4 months ago
@@ -49,23 +44,19 @@ imagestreams/perl                                  docker-registry.default.svc:5
 imagestreams/php                                   docker-registry.default.svc:5000/openshift/php                                   7.0,latest,5.5 + 1 more...     18 hours ago
 imagestreams/postgresql                            docker-registry.default.svc:5000/openshift/postgresql                            latest,9.2,9.4 + 1 more...     4 months ago
 imagestreams/python                                docker-registry.default.svc:5000/openshift/python                                3.4,3.5,latest + 2 more...     19 hours ago
-imagestreams/redhat-openjdk18-openshift            docker-registry.default.svc:5000/openshift/redhat-openjdk18-openshift            1.0,1.1,1.2                    3 months ago
-imagestreams/redhat-sso70-openshift                docker-registry.default.svc:5000/openshift/redhat-sso70-openshift                1.3,1.4                        3 months ago
-imagestreams/redhat-sso71-openshift                docker-registry.default.svc:5000/openshift/redhat-sso71-openshift                1.0,1.1,1.2 + 1 more...        3 months ago
-imagestreams/redhat-sso72-openshift                docker-registry.default.svc:5000/openshift/redhat-sso72-openshift                1.0                            3 months ago
 imagestreams/redis                                 docker-registry.default.svc:5000/openshift/redis                                 3.2,latest                     21 hours ago
 imagestreams/ruby                                  docker-registry.default.svc:5000/openshift/ruby                                  latest,2.2,2.3 + 2 more...     21 hours ago
 
-Note: Your list may look a little different, and this list may include more than the default from openshift_examples.
+Note: This list is truncated from the default.
 
-Along the way, you may notice that those images never update.  Months go by, and you realize that you are running old containers.  
+Along the way during your use of OpenShift, you may notice that those images never update.  Months go by, and you realize that you are running old containers.  
 Note on the right hand side of the output above that most of these images have
 not been updated in 3-4 months!  A couple of them have been updated manually in a more recent time frame.
 One day you ask yourself,
 why?  Well, by default we don't want to push people into making changes they aren't thinking about. So this is the default behavior. 
 There are also concerns over supported and tested configurations footnote:[https://access.redhat.com/articles/2176281].
 
-However, OpenShift can handle the management of checking for latest updates to base images (ImageStreams) and allowing such events to trigger other new builds.  Here are a few steps to get you going toward automatic container image updates on OpenShift.
+The good news is that OpenShift can handle the management of checking for latest updates to upstream images and allowing such events to trigger new builds of your own custom images, to keep them up-to-date as well.  This is the container equivalent to doing a ``yum update`` on your system to get the latest patches of your underlying infrastructure or middleware, such as upgrading your apache, your ruby, or your tomcat.  Here are a few steps to get you going toward automatic container image updates on OpenShift.
 
 === Configure imagePolicyConfig in the Master Config to Run a Scheduled Import Process
 
@@ -121,6 +112,11 @@ To perform this operation on just one imagestream, in this example the Redis 3.2
 
  $ oc patch is redis -p '{"spec":{"tags":[{"name":"3.2","importPolicy":{"scheduled":true}}]}}'
 
+You can run a describe operation on any ImageStream and should now see a comment that informs us the image will update automatically from its upstream resource URL:
+
+ $ oc describe is redis | grep "updates automatically"
+   updates automatically from registry registry.redhat.io/rhscl/redis-32-rhel7:latest
+
 Notes
 
 - The tag "name" must be of kind "DockerImage" and not "ImageStreamTag"!  
@@ -129,7 +125,7 @@ Notes
 
 === Configure New ImageStreams to Update Automatically
 
-Third, when working with ImageStreams, performing an ``import-image`` or ``oc tag`` into any namespace, be sure to specify the flag ``--scheduled=true`` :
+Third, when working with ImageStreams, performing an ``import-image`` or ``oc tag`` into any namespace, be sure to specify the flag ``--scheduled=true``.  Let's test it out on a sample project space:
 
 [source]
 ----
@@ -153,7 +149,7 @@ $ oc get secret imagestreamsecret -n openshift --export -o yaml | oc create -f- 
 secret/imagestreamsecret created
 ----
 
-Now import an image with the ``-scheduled=true`` flag.
+Now import an image with the ``-scheduled=true`` flag and notice the output below indicate it will update automatically (output truncated).
 
 [source]
 ----
@@ -175,144 +171,8 @@ latest
 
   * registry.redhat.io/rhscl/ruby-25-rhel7@sha256:88b5a4ae11075034ef05eed69b17a5527eb44ae1352e660d02df96394eb258d7
       Less than a second ago
-
-Image Name:	ruby:latest
-Docker Image:	registry.redhat.io/rhscl/ruby-25-rhel7@sha256:88b5a4ae11075034ef05eed69b17a5527eb44ae1352e660d02df96394eb258d7
-Name:		sha256:88b5a4ae11075034ef05eed69b17a5527eb44ae1352e660d02df96394eb258d7
-Created:	Less than a second ago
-Annotations:	image.openshift.io/dockerLayersOrder=ascending
-Image Size:	182.7MB in 5 layers
-Layers:		75.72MB	sha256:9a1bea865f798d0e4f2359bd39ec69110369e3a1131aba6eb3cbf48707fdf92d
-		1.237kB	sha256:602125c154e3e132db63d8e6479c5c93a64cbfd3a5ced509de73891ff7102643
-		6.787MB	sha256:587a812f9444e67d0ca2750117dbff4c97dd83a07e6c8c0eb33b3b0b7487773f
-		86.37MB	sha256:12829a4d5978f41e39c006c78f2ecfcd91011f55d7d8c9db223f9459db817e48
-		13.77MB	sha256:001d9a43195ba977e8d28f9bc5c3aaed530d43790bdda1542c01c2a248ce22ea
-Image Created:	2 weeks ago
-Author:		<none>
-Arch:		amd64
-Entrypoint:	container-entrypoint
-Command:	/bin/sh -c $STI_SCRIPTS_PATH/usage
-Working Dir:	/opt/app-root/src
-User:		1001
-Exposes Ports:	8080/tcp
-Docker Labels:	architecture=x86_64
-		authoritative-source-url=registry.access.redhat.com
-		build-date=2018-10-25T11:08:38.127442
-		com.redhat.build-host=cpt-0012.osbs.prod.upshift.rdu2.redhat.com
-		com.redhat.component=rh-ruby25-container
-		description=Ruby 2.5 available as container is a base platform for building and running various Ruby 2.5 applications and frameworks. Ruby is the interpreted scripting language for quick and easy object-oriented programming. It has many features to process text files and to do system management tasks (as in Perl). It is simple, straight-forward, and extensible.
-		distribution-scope=public
-		io.k8s.description=Ruby 2.5 available as container is a base platform for building and running various Ruby 2.5 applications and frameworks. Ruby is the interpreted scripting language for quick and easy object-oriented programming. It has many features to process text files and to do system management tasks (as in Perl). It is simple, straight-forward, and extensible.
-		io.k8s.display-name=Ruby 2.5
-		io.openshift.expose-services=8080:http
-		io.openshift.s2i.scripts-url=image:///usr/libexec/s2i
-		io.openshift.tags=builder,ruby,ruby25,rh-ruby25
-		io.s2i.scripts-url=image:///usr/libexec/s2i
-		maintainer=SoftwareCollections.org <sclorg@redhat.com>
-		name=rhscl/ruby-25-rhel7
-		release=23
-		summary=Platform for building and running Ruby 2.5 applications
-		url=https://access.redhat.com/containers/#/registry.access.redhat.com/rhscl/ruby-25-rhel7/images/2.5-23
-		usage=s2i build https://github.com/sclorg/s2i-ruby-container.git --context-dir=2.5/test/puma-test-app/ rhscl/ruby-25-rhel7 ruby-sample-app
-		vcs-ref=8185c33a256c005246ad121a3f81cc3a2700422c
-		vcs-type=git
-		vendor=Red Hat, Inc.
-		version=2.5
-Environment:	PATH=/opt/app-root/src/bin:/opt/app-root/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-		container=oci
-		SUMMARY=Platform for building and running Ruby 2.5 applications
-		DESCRIPTION=Ruby 2.5 available as container is a base platform for building and running various Ruby 2.5 applications and frameworks. Ruby is the interpreted scripting language for quick and easy object-oriented programming. It has many features to process text files and to do system management tasks (as in Perl). It is simple, straight-forward, and extensible.
-		STI_SCRIPTS_URL=image:///usr/libexec/s2i
-		STI_SCRIPTS_PATH=/usr/libexec/s2i
-		APP_ROOT=/opt/app-root
-		HOME=/opt/app-root/src
-		BASH_ENV=/opt/app-root/etc/scl_enable
-		ENV=/opt/app-root/etc/scl_enable
-		PROMPT_COMMAND=. /opt/app-root/etc/scl_enable
-		NODEJS_SCL=rh-nodejs8
-		RUBY_MAJOR_VERSION=2
-		RUBY_MINOR_VERSION=5
-		RUBY_VERSION=2.5
-		RUBY_SCL_NAME_VERSION=25
-		RUBY_SCL=rh-ruby25
-		IMAGE_NAME=rhscl/ruby-25-rhel7
-
-
-
 ----
 
-[source]
-----
-$ oc get is
-NAME      DOCKER REPO                                  TAGS      UPDATED
-ruby      docker-registry.default.svc:5000/test/ruby   latest    8 minutes ago
-----
-
-[source]
-----
-$ oc describe is ruby
-Name:			ruby
-Namespace:		test
-Created:		21 minutes ago
-Labels:			<none>
-Annotations:		openshift.io/image.dockerRepositoryCheck=2018-11-12T21:36:36Z
-Docker Pull Spec:	docker-registry.default.svc:5000/test/ruby
-Image Lookup:		local=false
-Unique Images:		1
-Tags:			1
-
-latest
-  updates automatically from registry registry.redhat.io/rhscl/ruby-25-rhel7
-
-  * registry.redhat.io/rhscl/ruby-25-rhel7@sha256:88b5a4ae11075034ef05eed69b17a5527eb44ae1352e660d02df96394eb258d7
-      9 minutes ago
-----
-
-[source]
-----
-$ oc get is -o yaml
-apiVersion: v1
-items:
-- apiVersion: image.openshift.io/v1
-  kind: ImageStream
-  metadata:
-    annotations:
-      openshift.io/image.dockerRepositoryCheck: 2018-11-12T21:36:36Z
-    creationTimestamp: 2018-11-12T21:23:59Z
-    generation: 2
-    name: ruby
-    namespace: test
-    resourceVersion: "59600467"
-    selfLink: /apis/image.openshift.io/v1/namespaces/test/imagestreams/ruby
-    uid: 45324578-e6c1-11e8-a78a-001a4a160160
-  spec:
-    lookupPolicy:
-      local: false
-    tags:
-    - annotations: null
-      from:
-        kind: DockerImage
-        name: registry.redhat.io/rhscl/ruby-25-rhel7
-      generation: 2
-      importPolicy:
-        scheduled: true
-      name: latest
-      referencePolicy:
-        type: Source
-  status:
-    dockerImageRepository: docker-registry.default.svc:5000/test/ruby
-    tags:
-    - items:
-      - created: 2018-11-12T21:36:36Z
-        dockerImageReference: registry.redhat.io/rhscl/ruby-25-rhel7@sha256:88b5a4ae11075034ef05eed69b17a5527eb44ae1352e660d02df96394eb258d7
-        generation: 2
-        image: sha256:88b5a4ae11075034ef05eed69b17a5527eb44ae1352e660d02df96394eb258d7
-      tag: latest
-kind: List
-metadata:
-  resourceVersion: ""
-  selfLink: ""
-----
 
 For further reading:
 
