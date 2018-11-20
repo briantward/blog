@@ -54,9 +54,11 @@ Note on the right hand side of the output above that most of these images have
 not been updated in 3-4 months!  A couple of them have been updated manually in a more recent time frame.
 One day you ask yourself,
 why?  Well, by default we don't want to push people into making changes they aren't thinking about. So this is the default behavior. 
-There are also concerns over supported and tested configurations footnote:[https://access.redhat.com/articles/2176281].
+There are also concerns over supported and tested configurations footnote:[https://access.redhat.com/articles/2176281].  
 
-The good news is that OpenShift can handle the management of checking for latest updates to upstream images and allowing such events to trigger new builds of your own custom images, to keep them up-to-date as well.  This is the container equivalent to doing a ``yum update`` on your system to get the latest patches of your underlying infrastructure or middleware, such as upgrading your apache, your ruby, or your tomcat.  Here are a few steps to get you going toward automatic container image updates on OpenShift.
+The good news is that OpenShift can handle the management of checking for latest updates to upstream images and allowing such events to trigger new builds of your own custom images, to keep them up-to-date as well.  This is the container equivalent to doing a ``yum update`` on your system to get the latest patches of your underlying infrastructure or middleware, such as upgrading your apache, your ruby, or your tomcat. You should be aware when implementing automatic image updates that some existing users may already have build triggers in place that kick off new builds and deployments when these images are updated.  They will need to know you plan on changing this behavior.  This is a great and powerful feature, but a change like this should always be tested and communicated with your users knowledge.
+
+Here are a few steps to get you going toward automatic container image updates on OpenShift.
 
 === Configure imagePolicyConfig in the Master Config to Run a Scheduled Import Process
 
