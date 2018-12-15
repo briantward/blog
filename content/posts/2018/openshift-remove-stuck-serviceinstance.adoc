@@ -1,0 +1,71 @@
+---
+title: OpenShift Remove Stuck ServiceInstance
+date: 2018-12-15
+categories: ["openshift"]
+tags: ["Red Hat","container","serviceinstance","service catalog","servicebinding","kubernetes"]
+language: en
+slug: openshift-remove-stuck-serviceinstance
+---
+
+== OpenShift Remove Stuck ServiceInstance
+
+To delete a stuck serviceinstance where a project namespace no longer exists:
+
+[source]
+----
+$ oc get serviceinstance --all-namespaces -o wide
+NAMESPACE               NAME                             CLASS                                          PLAN      STATUS                  AGE
+test                    cakephp-mysql-example-vfzkq      ClusterServiceClass/cakephp-mysql-example      default   Failed                  113d
+test                    cakephp-mysql-persistent-f75gl   ClusterServiceClass/cakephp-mysql-persistent   default   Failed                  113d
+webconsole-extensions   httpd-example-6fxx5              ClusterServiceClass/httpd-example              default   DeprovisionCallFailed   10d
+----
+
+. Create the project namespace again
+
+ $ oc new-project test
+ 
+. Now delete the serviceinstance
+
+ $ oc delete serviceinstance test -n cakephp-mysql-example-vfzkq
+
+. If that doesn't delete it, then remove the finalizer
+
+ $ oc edit serviceinstance test -n cakephp-mysql-example-vfzkq
+
+Delete:
+
+  finalizers:
+  - kubernetes-incubator/service-catalog
+
+. If that doesn't delete it, or you are told you cannot write without further changes such as:
+
+  # serviceinstances.servicecatalog.k8s.io "cakephp-mysql-example-vfzkq" was not valid:
+  # * status.inProgressProperties: Required value: inProgressProperties is required when currentOperation is "Provision", "Update" or "Deprovision"
+
+Then wait for my update, when I figure out how to get rid of it.  I suspect that this serviceinstance object was built prior to later changes and restrictions from API updates, causing this problem saving the object.
+
+I tried hacking it by placing this block where it asked, copied from a different serviceinstance block, but it didn't quite work:
+
+[source]
+----
+  inProgressProperties: "none"
+    clusterServicePlanExternalID: e8628b24-2157-11e8-97ea-001a4a16015f
+    clusterServicePlanExternalName: dev
+    parameterChecksum: 0e9965e95b0127174b3a349ade9ec80a5e98cc9c4ea4938ebd2e947d6ee297ef
+    parameters:
+      DATABASE_SERVICE_NAME: <redacted>
+      MEMORY_LIMIT: <redacted>
+      MONGODB_DATABASE: <redacted>
+      MONGODB_VERSION: <redacted>
+      NAMESPACE: <redacted>
+      VOLUME_CAPACITY: <redacted>
+    userInfo:
+      extra:
+        scopes.authorization.openshift.io:
+        - user:full
+      groups:
+      - system:authenticated:oauth
+      - system:authenticated
+      uid: ""
+      username: admin
+----

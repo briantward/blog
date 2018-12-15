@@ -1,6 +1,6 @@
 ---
 title: Ansible Tips
-date: 2018-08-11
+date: 2018-12-15
 categories: ["tips"]
 tags: ["ansible"]
 language: en
@@ -12,3 +12,7 @@ slug: ansible-tips
 === Print to stout and log at same time...
 
  ansible-playbook -i hosts playbook.yml -vvv | tee -a output.log
+
+=== Run a single command on all hosts... this one cleans up your journals... and runs 10 at a time
+
+ ansible all -a 'journalctl --vacuum-time=2d' -f 10

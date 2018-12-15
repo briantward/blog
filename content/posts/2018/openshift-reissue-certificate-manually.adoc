@@ -1,0 +1,75 @@
+---
+title: OpenShift Reissue Certificate Manually
+date: 2018-12-14
+categories: ["openshift"]
+tags: ["Red Hat","container","certificate,"error"]
+language: en
+slug: openshift-reissue-certificate-manually
+---
+
+== OpenShift Reissue Certificate Manually
+
+I recently ran the redeploy certificates playbook on my 3.11 cluster and found it broke apps that rely on the certificate signer ca, as it issues a new certificate signer ca but does not retrigger new certificates to be generated from it (at least not for all of the apps).  In my case, it killed the latest Prometheus deployment and I got service unavailable messages from the router.
+
+https://docs.openshift.com/container-platform/3.11/install_config/redeploying_certificates.html
+
+To diagnose the problem, I checked the logs on the grafana app:
+
+[source]
+----
+$ oc logs -f grafana-5ff4bb48f5-q46ff -c grafana-proxy 
+...
+2018/12/13 15:49:29 server.go:2923: http: TLS handshake error from 10.129.2.1:52306: remote error: tls: unknown certificate authority
+----
+
+So I decided to check the tls certificate, which is usually mounted from a secret:
+
+[source]
+----
+$ oc get secrets | grep tls
+alertmanager-main-tls                         kubernetes.io/tls                     2         38m
+grafana-tls                                   kubernetes.io/tls                     2         42m
+kube-state-metrics-tls                        kubernetes.io/tls                     2         38m
+node-exporter-tls                             kubernetes.io/tls                     2         38m
+prometheus-k8s-tls                            kubernetes.io/tls                     2         38m
+----
+
+It is far more useful to be able to actually read the certificate contents in a legible format rather than stare at either the PEM or base64 encoding.
+
+ $ oc get secret grafana-tls -n openshift-monitoring -o yaml | grep tls.crt | awk '{print $2}' | base64 -d - | openssl x509 -in - -text -noout
+
+Looking at my certificate, everything seemed to be fine.  It had not expired.  But I did recall the logs specifically stating that the certificate authority was unknown, so let's focus on that.
+
+ $ oc get secret grafana-tls -n openshift-monitoring -o yaml | grep tls.crt | awk '{print $2}' | base64 -d - | openssl x509 -in - -text -noout | grep Issuer
+        Issuer: CN = openshift-service-serving-signer@1536343562
+
+Let's compare it to one of the apps that is working correctly:
+
+ $ oc get secret console-serving-cert -n openshift-console -o yaml | grep tls.crt | awk '{print $2}' | base64 -d - | openssl x509 -in - -text -noout | grep Issuer
+        Issuer: CN = openshift-service-serving-signer@1544190532
+
+Aha! The redeploy certificates playbook didn't update my Prometheus deployment.  That seems like a big miss.  Let's fix it.
+
+Delete the old secret since it's worthless now.
+
+ $ oc delete secret grafana-tls -n openshift-monitoring
+
+Remove the certificate signing annotations by manually editing the service responsible for the secret or using these commands.
+ 
+ $ oc annotate service grafana-tls \
+   service.alpha.openshift.io/serving-cert-secret-name- \
+   service.alpha.openshift.io/serving-cert-signed-by- 
+
+ $ oc annotate service grafana-tls \
+   service.alpha.openshift.io/serving-cert-secret-name=grafana-tls
+
+You should be able to see a new secret just created, and you can check it for the correct CA.
+
+ $ oc get secret grafana-tls -n openshift-monitoring -o yaml | grep tls.crt | awk '{print $2}' | base64 -d - | openssl x509 -in - -text -noout | grep Issuer
+        Issuer: CN = openshift-service-serving-signer@1544190532
+
+Now delete all the pods to recreate new ones with the new certificate:
+
+ $ oc delete pods --all -n openshift-monitoring
+
+Give it a few minutes and all is back up and running.

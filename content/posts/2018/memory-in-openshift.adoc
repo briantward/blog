@@ -1,0 +1,115 @@
+
+= Cgroups, cAdvisor, heapster, hawkular, and docker memory statistics in OpenShift
+
+Work In Progress
+
+=== Linux
+
+top
+
+VIRT
+RES
+SHR
+free
+used
+buff/cache
+avail Mem
+
+=== cgroups
+
+Cgroups reports a bunch of memory stats:
+
+<examples>
+
+The cgroups kernel team still thinks the best calculation for memory usage would be RSS+CACHE(+SWAP) values in memory.stat [3]. Also note that RSS here is not the same as RES on ``top`` as explained at the bottom of section 5.2 of cgroups memory documentation [3].
+
+"Only anonymous and swap cache memory is listed as part of 'rss' stat. This should not be confused with the true 'resident set size' or the amount of physical memory used by the cgroup. 'rss + mapped_file" will give you resident set size of cgroup. (Note: file and shmem may be shared among other cgroups. In that case, mapped_file is accounted only when the memory cgroup is owner of page cache.)"
+
+https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
+
+=== docker
+
+With regards to ``docker stats``:
+
+It actually calculates using memory.usage_in_bytes and subtracts "cache" from the memory.stats output [1,2]. Docker made this change to more closely reflect memory usage that sysadmins were used to seeing when using the ``top`` command [4].
+
+Here we see the comment from BEFORE docker made the change, as docker was showing memory usage_in_bytes back then:
+
+>> The statistics of RES and memory cgroup are different, the RES does not take caches into account, but the memory cgroup does, that's why MEM USAGE in docker stats is much more than RES in top [4]
+
+The difficult part of that comment is that one might read that's the way they continue to do it today.  However, this PR [1] shows that they did bend to the will of those who opened that issue, and they changed the memory report to remove cache.  
+
+=== cAdvisor
+
+cAdvisor reports a full set of comparable metrics read from the kernel cgroups footnote:[https://github.com/google/cadvisor/blob/master/info/v1/container.go#L338-L373]
+
+=== Heapster
+
+=== metrics-server
+
+=== OpenShift
+
+Login to an admin account so you can grab a token:
+
+# oc login -u admin
+
+Get the token:
+
+# oc whoami -t
+
+Call the stats summary API:
+
+# curl -H "Authorization: Bearer <redacted>" https://127.0.0.1:10250/stats/summary -k -o stats.json
+
+A typical memory report from the kubernetes stats summary API:
+
+     "memory": {
+      "time": "2018-12-04T21:18:58Z",
+      "availableBytes": 18936287232,
+      "usageBytes": 3045765120,
+      "workingSetBytes": 1942880256,
+      "rssBytes": 1789882368,
+      "pageFaults": 0,
+      "majorPageFaults": 0
+     }
+
+
+
+ Solly Ross 2018-03-07 17:05:06 EST
+
+One of these days, I'll actually write this down somewhere more permanent:
+
+1. Every 10-30 seconds, the the cAdvisor compiled in to the node collects new metrics from the system by inspecting cgroups, among other things.  These metrics are kept around for exposing via the Kubernetes stats summary API, and Kubernetes stats legacy API.
+
+2. Every `metrics_resolution`, Heapster will query each node via one of the two aforementioned APIs.  I believe the default for OpenShift 3.5 uses the stats summary API (you can confirm by looking at the Heapster RC, and seeing if it uses `--source=kubernetes.summary_api:<some stuff>` (summary) or `--source=kubernetes:<some stuff>` legacy.
+  
+  For the summary API, this looks more or less like `curl -H "Authorization: Bearer <Heapster service account token>" https://$NODE_IP:10250/stats/summary`
+
+3. For CPU, Heapster takes the most recent data point of cumulative CPU time and combines it with the new data point to form the CPU usage rate.  Importantly, duplicate batches of metrics, or metrics whose pod start time does not match the previous batch's start time, will cause missing data points here.
+
+4a. kubectl top then queries Heapster at the `/apis/metrics/v1alpha1/namespaces/<somens>/pods` to get metrics for the given pod.
+
+4b. For the dashboard, Heapster pushes each new data batch to Hawkular.  The dashboard the queries Hawkular for metrics.
+
+from Comment #3 on https://bugzilla.redhat.com/show_bug.cgi?id=1552858
+
+ Solly Ross 2018-03-08 15:42:44 EST
+
+NB: for Heapster, memory as reported by `kubectl top` and the resource metrics API is working set size.
+
+The below details roughly how cAdvisor determines memory stats.  CPU is similar.  However, I suspect this isn't a collection issue at the cAdvisor level.  I suspect the issue is further up the chain (Heapster, for instance).  Can you please check that the summary API returns the correct information?
+
+---
+
+The actual information for CPU and memory is done by inspecting cgroup hierarchies.  To cAdivsor, a "container" is basically some point in a cgroup hierarchy.  Kubelet determines which of these are pod containers by checking which have associated Docker container information, and the correct labels to indicate that they're owned by a pod.
+
+For each "container" (from cAdvisor's perspective), every 10-30s, new stats are fetched by inspecting the values at a particular cgroup hierarchy point.  We can take a look at this information ourselves.  First, find the pid of the docker container: `CPID=$(docker inspect <docker-container-id> -f '{{.State.Pid}}')`.  Then, we can check the list of available subsystems using `cat /proc/${CPID}/cgroup`.  We should see a list of cgroups and paths to them.
+
+Find the one for "memory" -- it should have a path like `/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod5d973d8c_0790_11e8_b804_5254002b8d24.slice/docker-67c1459bc4d3146c91471a365febac47f2513ebf71c75c6e795caa321b87c37f.scope`.  That path is relative to the cgroup mount point at `/sys/fs/cgroups`, and also to the particular subsystem within `/sys/fs/cgroups`.  So, if we need to look at `/sys/fs/cgroups/memory/$PATH`.  Within that path, we should should a "file" called `memory.stat`.  If so, we're in the right place.  Next, look for a "file" called `usage_in_bytes`.  This file contains the value (in bytes) used to determine the actual working set size.
+
+from comment #6
+[1] https://github.com/docker/cli/pull/80/files#diff-6461907ebcb6301af53f701fc953b949R229
+[2] https://github.com/moby/moby/issues/35530
+[3] https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
+[4] https://github.com/moby/moby/issues/10824
+https://github.com/google/cadvisor/blob/master/info/v1/container.go#L338-L373

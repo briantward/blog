@@ -1,0 +1,30 @@
+---
+title: Migrate OpenShift PersistentVolumes from One Cluster to Another
+date: 2018-12-04
+categories: ["openshift"]
+tags: ["sync","Red Hat","container","pv","migrate","cluster","persistentvolume","persistentvolumeclaim"]
+language: en
+slug: openshift-migrate-pv
+---
+
+== Migrate OpenShift PersistentVolumes from One Cluster to Another
+
+Work In Progress!
+
+ $ oc get pv mypvid -o yaml --export > mypv.yaml
+ $ oc get pvc mypvcid -o yaml --export > mypvc.yaml
+
+Remove all annotations and instance identifiers. If you leave them in place, you may get an error stating the PVC is lost.
+
+Verify that all SecurityContextContstraints are the same between each cluster and project environment, otherwise you may fail to gain ownership of the volume.
+
+Spin down the pods on the old cluster.  
+
+Validate from your storage backend that the volume was released, if possible.
+
+You do not need to worry about Retention if you leave everything in place in your old cluster while you spin up your new cluster.  However, if you were to delete your PVC and the Retention policy is delete, it will delete the PersistentVolume!  So don't do that.  Bear in mind that if both environments are in use at the same time you could probably have serious problems.  If possible, point the new cluster to a new snapshot of the volumes such that the new cluster isn't even using the same storage, but a copy of it.
+
+On new cluster
+
+ $ oc create -f mypv.yaml
+ $ oc create -f mypvc.yaml

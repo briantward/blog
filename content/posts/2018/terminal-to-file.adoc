@@ -1,0 +1,33 @@
+---
+title: Terminal to File Tips
+date: 2018-12-13
+categories: ["tips"]
+tags: ["tips"]
+language: en
+slug: terminal-to-file
+---
+
+== Terminal to File Tips
+
+[source]
+----
+cat <<EOF | kubectl create -f -
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: heapster
+EOF
+----
+
+
+[source]
+----
+echo 'apiVersion: v1
+data:
+  <FILENAME>: |
+    <FILECONTENT>
+kind: ConfigMap
+metadata:
+  name: <CONFIGMAP_NAME>
+  namespace: <PROJECT_NAMESPACE>' | oc create -f -
+----

@@ -1,0 +1,36 @@
+---
+title: OpenShift HTTPD loglevel
+date: 2018-12-13
+categories: ["openshift"]
+tags: ["Red Hat","container","httpd","loglevel","logging"]
+language: en
+slug: openshift-httpd-loglevel
+---
+
+== OpenShift HTTPD loglevel
+
+OpenShift comes with a container image packaged from this source.  To make further configuration changes check the documentation here.
+
+https://github.com/sclorg/httpd-container
+
+. Create a configmap to mount a log.conf file that contains your apache loglevel configuration. Be sure to update <PROJECT_NAMESPACE> below before running this command.
+
+[source]
+----
+echo 'apiVersion: v1
+data:
+  log.conf: |
+    LogLevel debug
+    ErrorLog /dev/stdout
+    TransferLog /dev/stdout'
+kind: ConfigMap
+metadata:
+  name: logfile
+  namespace: <PROJECT_NAMESPACE>' | oc create -f -
+----
+
+
+. Update your deploymentConfig. Configmaps with apache configs for the image ``rhscl/httpd-24-rhel7`` should mount to ``/opt/app-root/etc/httpd.d/`` 
+
+ $ oc volume dc mydeploymentconfig  --add --overwrite --name=logfile --mount-path=/opt/app-root/etc/httpd.d/ --source='{"configMap": { "name": "logfile"}}'
+

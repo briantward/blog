@@ -1,0 +1,164 @@
+---
+title: OpenShift Prometheus Node Exporter CrashLoop
+date: 2018-12-13
+categories: ["openshift"]
+tags: ["Red Hat","container","prometheus","node-exporter","CrashLoopBackOff"]
+language: en
+slug: openshift-prometheus-node-exporter-crashloop
+---
+
+== OpenShift Prometheus Node Exporter CrashLoop
+
+Issue: A prometheus node exporter pod is stuck in a CrashLoopBackOff as a result of a failure to release the port 9100 bound by the previous instance before the next instance starts and attempts to reattach to it. This could potentially be resolved by changing the daemonset configuration (updateStrategy or terminationGracePeriodSeconds).  Here, since we've only seen it once, we just kill the process holding the port open from the node itself.  Deleting the pod may have done the same thing.  We had to delete the pod anyways to get a new one to rollout.
+
+https://github.com/coreos/prometheus-operator/issues/1612
+
+. See the CrashLoopBackOff error on one node.
+
+[source]
+----
+$ oc get pods -o wide
+NAME                             READY     STATUS             RESTARTS   AGE       IP               NODE                                    NOMINATED NODE
+prometheus-0                     6/6       Running            69         30d       10.129.3.192     openshift-infra-1.os.rhtrva.internal    <none>
+prometheus-node-exporter-6x9dv   1/1       Running            7          97d       192.168.10.152   openshift-infra-1.os.rhtrva.internal    <none>
+prometheus-node-exporter-9nn9l   1/1       Running            29         97d       192.168.10.153   openshift-master-0.os.rhtrva.internal   <none>
+prometheus-node-exporter-gmttk   1/1       Running            8          97d       192.168.10.151   openshift-infra-0.os.rhtrva.internal    <none>
+prometheus-node-exporter-hzpf2   0/1       CrashLoopBackOff   1973       97d       192.168.10.149   openshift-node-0.os.rhtrva.internal     <none>
+prometheus-node-exporter-llzjt   1/1       Running            28         97d       192.168.10.155   openshift-master-2.os.rhtrva.internal   <none>
+prometheus-node-exporter-n8n9q   1/1       Running            32         97d       192.168.10.154   openshift-master-1.os.rhtrva.internal   <none>
+prometheus-node-exporter-ql9kz   1/1       Running            8          97d       192.168.10.150   openshift-node-1.os.rhtrva.internal     <none>
+----
+
+. The logs show us it is attempting to bind to a port that is already bound.  Since nothing else on this node uses the same port, it must have had a bad shutdown before attempting to start again.  It appears the original shutdown is still stuck.  
+
+[source]
+----
+$ oc logs -f pod/prometheus-node-exporter-hzpf2
+time="2018-12-13T15:50:37Z" level=info msg="Starting node_exporter (version=0.15.2, branch=, revision=)" source="node_exporter.go:43"
+time="2018-12-13T15:50:37Z" level=info msg="Build context (go=go1.9.4, user=mockbuild@x86-019.build.eng.bos.redhat.com, date=20180706-18:56:50)" source="node_exporter.go:44"
+time="2018-12-13T15:50:37Z" level=info msg="No directory specified, see --collector.textfile.directory" source="textfile.go:57"
+time="2018-12-13T15:50:37Z" level=info msg="Enabled collectors:" source="node_exporter.go:50"
+time="2018-12-13T15:50:37Z" level=info msg=" - xfs" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - filefd" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - cpu" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - zfs" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - infiniband" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - sockstat" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - entropy" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - netdev" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - uname" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - ipvs" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - edac" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - time" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - vmstat" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - timex" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - textfile" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - loadavg" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - wifi" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - hwmon" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - meminfo" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - netstat" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - mdadm" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - filesystem" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - arp" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - conntrack" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - stat" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - bcache" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg=" - diskstats" source="node_exporter.go:52"
+time="2018-12-13T15:50:37Z" level=info msg="Listening on :9100" source="node_exporter.go:76"
+time="2018-12-13T15:50:37Z" level=fatal msg="listen tcp :9100: bind: address already in use" source="node_exporter.go:79"
+----
+
+. Hop on the worker node running this pod and look for the process holding the port open and kill it.
+
+[source]
+----
+[root@openshift-node-0 ~]# ss -tulpen | grep 9100
+tcp    LISTEN     0      128      :::9100                 :::*                   users:(("node_exporter",pid=126655,fd=3)) uid:1000110000 ino:60828330 sk:ffff9b6a9a6c6300 v6only:0 <->
+[root@openshift-node-0 ~]# ps -ef | grep 126655
+root      94460  94044  0 10:56 pts/0    00:00:00 grep --color=auto 126655
+1000110+ 126655 126640  0 Dec06 ?        00:00:03 /bin/node_exporter
+----
+
+[source]
+----
+[root@openshift-node-0 ~]# kill -9 126655
+[root@openshift-node-0 ~]# ps -ef | grep 126655
+root      94660  94044  0 10:57 pts/0    00:00:00 grep --color=auto 126655
+[root@openshift-node-0 ~]# ss -tulpen | grep 9100
+----
+
+. Check the pods again.  We need to kick off a new pod to get it to rollout again.
+
+[source]
+----
+$ oc get pods -o wide
+NAME                             READY     STATUS             RESTARTS   AGE       IP               NODE                                    NOMINATED NODE
+prometheus-0                     6/6       Running            69         30d       10.129.3.192     openshift-infra-1.os.rhtrva.internal    <none>
+prometheus-node-exporter-6x9dv   1/1       Running            7          97d       192.168.10.152   openshift-infra-1.os.rhtrva.internal    <none>
+prometheus-node-exporter-9nn9l   1/1       Running            29         97d       192.168.10.153   openshift-master-0.os.rhtrva.internal   <none>
+prometheus-node-exporter-gmttk   1/1       Running            8          97d       192.168.10.151   openshift-infra-0.os.rhtrva.internal    <none>
+prometheus-node-exporter-hzpf2   0/1       CrashLoopBackOff   1973       97d       192.168.10.149   openshift-node-0.os.rhtrva.internal     <none>
+prometheus-node-exporter-llzjt   1/1       Running            28         97d       192.168.10.155   openshift-master-2.os.rhtrva.internal   <none>
+prometheus-node-exporter-n8n9q   1/1       Running            32         97d       192.168.10.154   openshift-master-1.os.rhtrva.internal   <none>
+prometheus-node-exporter-ql9kz   1/1       Running            8          97d       192.168.10.150   openshift-node-1.os.rhtrva.internal     <none>
+----
+
+. Delete the old pod to do this.
+
+[source]
+----
+$ oc delete pod prometheus-node-exporter-hzpf2
+----
+
+. Verify it is running and has a clean start and bind to port 9100
+[source]
+----
+$ oc get pods -o wide
+NAME                             READY     STATUS    RESTARTS   AGE       IP               NODE                                    NOMINATED NODE
+prometheus-0                     6/6       Running   69         30d       10.129.3.192     openshift-infra-1.os.rhtrva.internal    <none>
+prometheus-node-exporter-6x9dv   1/1       Running   7          97d       192.168.10.152   openshift-infra-1.os.rhtrva.internal    <none>
+prometheus-node-exporter-9nn9l   1/1       Running   29         97d       192.168.10.153   openshift-master-0.os.rhtrva.internal   <none>
+prometheus-node-exporter-gmttk   1/1       Running   8          97d       192.168.10.151   openshift-infra-0.os.rhtrva.internal    <none>
+prometheus-node-exporter-hr56n   1/1       Running   0          2s        192.168.10.149   openshift-node-0.os.rhtrva.internal     <none>
+prometheus-node-exporter-llzjt   1/1       Running   28         97d       192.168.10.155   openshift-master-2.os.rhtrva.internal   <none>
+prometheus-node-exporter-n8n9q   1/1       Running   32         97d       192.168.10.154   openshift-master-1.os.rhtrva.internal   <none>
+prometheus-node-exporter-ql9kz   1/1       Running   8          97d       192.168.10.150   openshift-node-1.os.rhtrva.internal     <none>
+----
+
+[source]
+----
+$ oc logs -f prometheus-node-exporter-hr56n
+time="2018-12-13T16:00:35Z" level=info msg="Starting node_exporter (version=0.15.2, branch=, revision=)" source="node_exporter.go:43"
+time="2018-12-13T16:00:35Z" level=info msg="Build context (go=go1.9.4, user=mockbuild@x86-019.build.eng.bos.redhat.com, date=20180706-18:56:50)" source="node_exporter.go:44"
+time="2018-12-13T16:00:35Z" level=info msg="No directory specified, see --collector.textfile.directory" source="textfile.go:57"
+time="2018-12-13T16:00:35Z" level=info msg="Enabled collectors:" source="node_exporter.go:50"
+time="2018-12-13T16:00:35Z" level=info msg=" - textfile" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - bcache" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - wifi" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - edac" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - stat" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - arp" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - timex" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - uname" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - vmstat" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - conntrack" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - meminfo" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - diskstats" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - filesystem" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - filefd" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - netdev" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - time" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - entropy" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - sockstat" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - hwmon" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - cpu" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - netstat" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - infiniband" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - ipvs" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - xfs" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - loadavg" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - mdadm" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg=" - zfs" source="node_exporter.go:52"
+time="2018-12-13T16:00:35Z" level=info msg="Listening on :9100" source="node_exporter.go:76"
+----
