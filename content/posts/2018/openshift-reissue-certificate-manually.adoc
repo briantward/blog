@@ -2,7 +2,7 @@
 title: OpenShift Reissue Certificate Manually
 date: 2018-12-14
 categories: ["openshift"]
-tags: ["Red Hat","container","certificate,"error"]
+tags: ["Red Hat","container","certificate","error"]
 language: en
 slug: openshift-reissue-certificate-manually
 ---
