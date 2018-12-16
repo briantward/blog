@@ -3,7 +3,7 @@
 
 Work In Progress
 
-=== Linux
+== Linux
 
 top
 
@@ -15,7 +15,7 @@ used
 buff/cache
 avail Mem
 
-=== cgroups
+== cgroups
 
 Cgroups reports a bunch of memory stats:
 
@@ -27,7 +27,7 @@ The cgroups kernel team still thinks the best calculation for memory usage would
 
 https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
 
-=== docker
+== docker
 
 With regards to ``docker stats``:
 
@@ -39,27 +39,27 @@ Here we see the comment from BEFORE docker made the change, as docker was showin
 
 The difficult part of that comment is that one might read that's the way they continue to do it today.  However, this PR [1] shows that they did bend to the will of those who opened that issue, and they changed the memory report to remove cache.  
 
-=== cAdvisor
+== cAdvisor
 
 cAdvisor reports a full set of comparable metrics read from the kernel cgroups footnote:[https://github.com/google/cadvisor/blob/master/info/v1/container.go#L338-L373]
 
-=== Heapster
+== Heapster
 
-=== metrics-server
+== metrics-server
 
-=== OpenShift
+== OpenShift
 
 Login to an admin account so you can grab a token:
 
-# oc login -u admin
+ # oc login -u admin
 
 Get the token:
 
-# oc whoami -t
+ # oc whoami -t
 
 Call the stats summary API:
 
-# curl -H "Authorization: Bearer <redacted>" https://127.0.0.1:10250/stats/summary -k -o stats.json
+ # curl -H "Authorization: Bearer <redacted>" https://127.0.0.1:10250/stats/summary -k -o stats.json
 
 A typical memory report from the kubernetes stats summary API:
 
@@ -113,3 +113,5 @@ from comment #6
 [3] https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
 [4] https://github.com/moby/moby/issues/10824
 https://github.com/google/cadvisor/blob/master/info/v1/container.go#L338-L373
+
+
