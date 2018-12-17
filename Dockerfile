@@ -13,7 +13,7 @@ RUN cd /opt \
   && yum clean all \
   && rm -rf /var/cache/yum \
   && gem install asciidoctor --no-user-install \
-  && git clone git@github.com:briantward/blog.git
+  && git clone https://github.com/briantward/blog.git
 
 
 
