@@ -12,7 +12,7 @@ RUN cd /opt \
   && yum -y install ruby git \
   && yum clean all \
   && rm -rf /var/cache/yum \
-  && gem install asciidoctor --no-user-install
+  && gem install asciidoctor --no-user-install \
   && git clone git@github.com:briantward/blog.git
 
 
