@@ -12,10 +12,13 @@ and administration tasks on a daily basis.  I've started this collection
 to remind myself of good programming practices as well as basic system
 configurations that I need to get things done.  
 
-Bear with me as I figure out this blog, hugo, and asciidoc stuff...
+While this is currently running on a golang blog engine, hugo, I'd like to take it a step further so that you can click through all the revisions to see how each article may have changed through time.  I don't expect any one of these posts to be completely static.  As I learn new things, or discover mistakes, I'll be updating the posts to reflect that new knowledge.  Maybe I'll want to adjust things stylistically too.  Right now stuff is organized by date because that's generally how blogs, and thus Hugo, typically work.  But really what is important is the topic, not the date.  
 
-Don't pay attention to dates.  This is technically running on a blog engine,
-but I plan on revising my work on the fly frequently.  Ideally this site will 
-show you version history to help you see how my own work has progressed.
+Three objectives for hugo and golang I have will be:
+
+. Add a feature to dynamically pull article changes through the git repo, akin to features in place for code history on sites such as github.com.
+. Add (or figure out how if already implemented) a feature for multiple users, to allow collaboration and growth.
+. Contribute back to asciidoc in golang, with a native implementation.  Right now this app is built using a ruby asciidoc parsing engine.  
+
 
 Brian Ward
