@@ -1,0 +1,162 @@
+---
+title: Configuring an External Heketi Prometheus Monitor on OpenShift
+date: 2019-01-15
+categories: ["linux","openshift"]
+tags: ["heketi","servicemonitor"]
+language: en
+slug: openshift-prometheus-external-heketi
+---
+
+== Configuring an External Heketi Prometheus Monitor on OpenShift
+
+Kudos goes to Ido Braunstain at devops.college for doing this on a raw Kubernetes cluster to monitor a GPU node. I adapted my information from https://devops.college/prometheus-operator-how-to-monitor-an-external-service-3cb6ac8d5acb[his article] to apply to monitoring both heketi and my external gluster nodes.
+
+=== Install the node-exporter on the external host
+
+First install docker to run the node-exporter container.  You may want to consider configuring other docker options. For this demo, it should work fine from first run.
+
+ # yum install docker
+ # systemctl start dockerd
+ # systemctl enable dockerd
+
+Login to Red Hat's container repo to stash credentials.
+
+[source]
+----
+# docker login https://registry.redhat.io
+Username: <omitted>
+Password: 
+Login Succeeded
+----
+
+Run the node-exporter container.
+
+ [root@storage-0 ~]# docker run -d -p 9100:9100 registry.redhat.io/openshift3/prometheus-node-exporter:v3.11.51
+
+Don't forget your firewall or selinux.
+
+=== Create the external Enpoint, Service, and ServiceMonitor objects
+
+You need an Endpoint reference by IP. 
+
+[source]
+----
+cat <<EOF | oc create -f -
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: heketi
+  namespace: openshift-monitoring
+  labels:
+    k8s-app: heketi
+subsets:
+- addresses:
+  - ip: 192.168.10.10
+  ports:
+  - name: heketi
+    port: 8080
+    protocol: TCP
+----
+
+A Service by type ExternalName.footnote:[Note that the Service name must match the Endpoint name.]
+
+[source]
+----
+cat <<EOF | oc create -f -
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    k8s-app: heketi
+  name: heketi
+  namespace: openshift-monitoring
+spec:
+  externalName: 192.168.10.10
+  ports:
+  - name: heketi
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  sessionAffinity: None
+  type: ExternalName
+----
+
+[source]
+-----
+cat <<EOF | oc create -f -
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: heketi
+  labels:
+    k8s-app: heketi
+  namespace: openshift-monitoring
+spec:
+  endpoints:
+  - interval: 30s
+    port: heketi
+    honorLables: true
+  namespaceSelector:
+    matchNames:
+    - openshift-monitoring 
+  selector:
+    matchLabels:
+      k8s-app: heketi
+-----
+
+If you have trouble, check the Prometheus container to see if the servicemonitor configmap got registered.
+
+ $ oc rsh prometheus-k8s-0 -c prometheus
+ sh-4.2$ cat /etc/prometheus/config_out/prometheus.env.yaml
+
+
+=== Add a Persistent Grafana Dashboard
+
+Note that this is explicitly not supported by Red Hat.  If you want your Prometheus deployment to remain supported, I suggest you build a second one just for your own customizations.  You can start with what we already have and remove the fuctions that overlap with the supported deployment later.  
+
+==== Disable the Prometheus and Cluter Monitor Operators
+
+These are responsible for keeping the state of your Prometheus deployment immutable.  That means, if you roll out a deployment change, it will revert it back to its known supported state.
+ 
+ $ oc scale deployment.apps/cluster-monitoring-operator --replicas=0
+ $ oc scale deployment.apps/prometheus-operator --replicas-0
+
+==== Create a ConfigMap From the Dashboard JSON File
+
+Assuming you have already built your own custom Grafana Dashboard, now make it persistent on pod restarts.
+
+ $ oc create cm grafana-dashboard-heketi --from-file=storage-dashboard-cm.json
+
+==== Assign the ConfigMap to the Deployment
+
+You could use a nice one liner with ``oc``, but it unfortunately would assign the volume to both containers inside the pod, rather than just the one you need it on.
+
+Use ``oc edit`` to manually edit the Deployment
+
+ $ oc edit deployment grafana
+
+Add these lines referring to the heketi dashboard next to the existing entries for the k8s-resources-pod
+
+[source]
+----
+        - mountPath: /grafana-dashboard-definitions/0/k8s-resources-pod
+          name: grafana-dashboard-k8s-resources-pod
+        - mountPath: /grafana-dashboard-definitions/0/heketi
+          name: grafana-dashboard-heketi
+
+...
+      - configMap:
+          defaultMode: 420
+          name: grafana-dashboard-k8s-resources-pod
+        name: grafana-dashboard-k8s-resources-pod
+      - configMap:
+          defaultMode: 420
+          name: grafana-dashboard-heketi
+----
+
+Your dashboard should be available, and persist restarts.
+
+
+Helpful docs
+https://stackoverflow.com/questions/47691479/listing-all-resources-in-a-namespace
+https://github.com/kubernetes/kubectl/issues/151#issuecomment-402003022
