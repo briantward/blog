@@ -35,7 +35,69 @@ Run the node-exporter container.
 
 Don't forget your firewall or selinux.
 
-=== Create the external Enpoint, Service, and ServiceMonitor objects
+=== Create the external Enpoint, Service, and ServiceMonitor objects for the node exporter
+
+[source]
+----
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: gluster-node-metrics
+  namespace: openshift-monitoring
+  labels:
+    k8s-app: gluster-node-metrics-endpoint.yaml
+subsets:
+- addresses:
+  - iip: 192.168.1.20
+  ports:
+  - name: metrics
+    port: 9100
+    protocol: TCP
+----
+
+[source]
+----
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    k8s-app: gluster-node-metrics
+  name: gluster-node-metrics
+  namespace: openshift-monitoring
+spec:
+  externalName: 192.168.1.20
+  ports:
+  - name: metrics
+    port: 9100
+    protocol: TCP
+    targetPort: 9100
+  sessionAffinity: None
+  type: ExternalName
+----
+
+[source]
+----
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: gluster-node-metrics
+  labels:
+    k8s-app: gluster-node-metrics
+  namespace: openshift-monitoring
+spec:
+  endpoints:
+  - interval: 30s
+    port: metrics
+    honorLables: true
+  namespaceSelector:
+    matchNames:
+    - openshift-monitoring 
+  selector:
+    matchLabels:
+      k8s-app: gluster-node-metrics
+----
+
+=== Create the external Enpoint, Service, and ServiceMonitor objects for Heketi
 
 You need an Endpoint reference by IP. 
 
@@ -51,7 +113,7 @@ metadata:
     k8s-app: heketi
 subsets:
 - addresses:
-  - ip: 192.168.10.10
+  - ip: 192.168.1.10
   ports:
   - name: heketi
     port: 8080
@@ -71,7 +133,7 @@ metadata:
   name: heketi
   namespace: openshift-monitoring
 spec:
-  externalName: 192.168.10.10
+  externalName: 192.168.1.10
   ports:
   - name: heketi
     port: 8080
