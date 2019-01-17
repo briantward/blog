@@ -83,7 +83,7 @@ A typical memory report from the kubernetes stats summary API:
 
 
 
- Solly Ross 2018-03-07 17:05:06 EST
+Solly Ross 2018-03-07 17:05:06 EST
 
 One of these days, I'll actually write this down somewhere more permanent:
 
@@ -101,7 +101,7 @@ One of these days, I'll actually write this down somewhere more permanent:
 
 from Comment #3 on https://bugzilla.redhat.com/show_bug.cgi?id=1552858
 
- Solly Ross 2018-03-08 15:42:44 EST
+Solly Ross 2018-03-08 15:42:44 EST
 
 NB: for Heapster, memory as reported by `kubectl top` and the resource metrics API is working set size.
 
