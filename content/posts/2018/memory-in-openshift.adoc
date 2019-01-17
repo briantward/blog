@@ -1,3 +1,11 @@
+---
+title: Cgroups, cAdvisor, heapster, hawkular, and docker memory statistics in OpenShift
+date: 2018-12-13
+categories: ["openshift"]
+tags: ["Red Hat","container"]
+language: en
+slug: memory-in-openshift
+---
 
 = Cgroups, cAdvisor, heapster, hawkular, and docker memory statistics in OpenShift
 

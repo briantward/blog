@@ -9,6 +9,8 @@ slug: lenovo-linux-intel-i915-video
 
 = Lenovo Intel i915 Video Drivers in Linux
 
+Note: Out of Date and incorrect analysis.
+
 I'm running fedora 27 on my Lenovo T460s and have been for a while.  I have 
 a docking station with two 24" monitors at work and another docking station with two 27" monitors at home.  I switch between them frequently.  Back in fedora
 21 and 22 I had tons of problems.  Sometimes monitors didn't come on, 

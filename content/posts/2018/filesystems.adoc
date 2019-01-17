@@ -28,3 +28,21 @@ slug: filesystems
 - lazy unmount an NFS mount that no longer exists on the network, if it's hung
 
   # umount -l /media/bosch
+
+- fill entire disk with one partition, using optimized sector allocation
+
+  # parted /dev/sdb mkpart primary 0% 100%
+
+- format disk partition
+
+ # mkfs -t ext4 /dev/sdb1
+
+Links used for reference:
+
+- https://thornelabs.net/2016/06/04/parted-commands-cheat-sheet.html
+
+- https://rainbow.chard.org/2013/01/30/how-to-align-partitions-for-best-performance-using-parted/
+
+- http://people.redhat.com/msnitzer/docs/io-limits.txt
+
+- https://www.gnu.org/software/parted/manual/parted.html

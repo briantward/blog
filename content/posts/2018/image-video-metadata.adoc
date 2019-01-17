@@ -1,0 +1,85 @@
+---
+title: Image Video Metadata
+date: 2018-12-27
+categories: ["tips"]
+tags: ["image","jpeg","video","mov"," mp4","metadata"]
+language: en
+slug: image-video-metadata
+---
+
+== Image Video Metadata Tips
+
+My wife and I wanted to combine photos and videos from my Samsung S7 and her iPhone 6.  Apple has a nice app that compiles photos and videos with background music, but doesn't give you a lot of customization options.  We couldn't sort except by date.  Since we wanted one particular photo at the end, we figured we would just hack the create date to trick it.  
+
+Then there were the videos.  Videos imported from the Samsung onto the Apple were sorted as though they were taken the day they were imported.  I was hoping there was some metadata field I could add that Apple might use over the file create date; however, all my attempts there failed.  The only way I think I could trick it would be to update the actual create date on the iPhone.  Since I haven't hacked much on iPhones, I gave up and just let the sort order of the videos be wrong. 
+
+https://michaelkummer.com/technology/videos-imported-photos-app-wrong-date/ 
+
+=== Editing Image Metadata
+
+ $ sudo dnf install perl-Image-ExifTool
+
+[source]
+----
+$ exiftool image0264.jpg | grep -i date
+File Modification Date/Time     : 2018:12:24 11:18:52-05:00
+File Access Date/Time           : 2018:12:27 16:36:52-05:00
+File Inode Change Date/Time     : 2018:12:24 11:18:52-05:00
+Modify Date                     : 2018:10:18 14:57:57
+Date/Time Original              : 2018:10:14 16:09:17
+Create Date                     : 2018:10:14 16:09:17
+Digital Creation Date           : 2018:10:14
+Profile Date Time               : 1998:02:09 06:49:00
+Metadata Date                   : 2018:10:18 14:57:57-04:00
+Date Created                    : 2018:10:14 16:09:17.99
+Date/Time Created               : 2018:10:14 16:09:17
+Digital Creation Date/Time      : 2018:10:14 16:09:17
+Create Date                     : 2018:10:14 16:09:17.99
+Date/Time Original              : 2018:10:14 16:09:17.99
+----
+
+Tried this.
+
+ $ exiftool -overwrite_original -EXIF:CreateDate="2018:12:31 16:09:17" image0264.jpg
+
+This one worked for what Apple iPhone Photo app was sorting by.
+
+ $ exiftool -overwrite_original -EXIF:DateTimeOriginal="2018:12:31 16:09:17" image0264.jpg
+
+=== Editing Video Metadata
+
+I already had ffmpeg but found mediainfo was a nice little tool.
+
+ $ sudo dnf install mediainfo
+
+Nothing in this example yet.
+
+ $ mediainfo 20180316_202002-1920.mp4 | grep -i date
+
+This produced some data.
+
+ $ ffmpeg -i 20180316_202002-1920.mp4 -c copy -metadata creation_time="2018-03-16 20:20:02" 20180316_202002-1920-new.mp4 
+
+[source]
+----
+$ mediainfo 20180316_202002-1920-new.mp4 | grep -i date
+Encoded date                             : UTC 2018-03-17 00:20:02
+Tagged date                              : UTC 2018-03-17 00:20:02
+Encoded date                             : UTC 2018-03-17 00:20:02
+Tagged date                              : UTC 2018-03-17 00:20:02
+Encoded date                             : UTC 2018-03-17 00:20:02
+Tagged date                              : UTC 2018-03-17 00:20:02
+----
+
+
+This added a recoreded date.
+
+ $ ffmpeg -i 20180316_202002-1920.mp4 -c copy -metadata ICRD="2018-03-16 20:20:02" 20180316_202002-1920-new-2.mp4 
+
+[source]
+----
+$ mediainfo 20180316_202002-1920-new-2.mp4 | grep -i date
+Recorded date                            : 2018-03-16 20:20:02
+----
+
+However, Apple iPhone Photo app appears to still ignore it, and sort rather by file create date.
