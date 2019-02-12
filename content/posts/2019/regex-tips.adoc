@@ -1,0 +1,18 @@
+---
+title: Regex Tips
+date: 2019-02-12
+categories: ["tips","linux"]
+tags: ["regex","regular","expressions"]
+language: en
+slug: regex-tips
+---
+
+== Regex Tips
+
+Grab content across lines:
+
+ ((.|\n)*)
+
+My favorite tester:
+
+- https://regex101.com/
