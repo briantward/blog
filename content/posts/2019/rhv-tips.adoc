@@ -1,0 +1,14 @@
+---
+title: Red Hat Virtualization Tips
+date: 2019-01-20
+categories: ["linux","rhv"]
+tags: ["virtualization"]
+language: en
+slug: rhv-tips
+---
+
+== Red Hat Virtualization Tips
+
+Set up a user who can run `virsh list --all`
+
+ saslpasswd2 -a libvirt username

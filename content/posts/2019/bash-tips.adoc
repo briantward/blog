@@ -1,0 +1,15 @@
+---
+title: bash Tips
+date: 2019-02-01
+categories: ["tips","linux"]
+tags: ["bash"]
+language: en
+slug: bash-tips
+---
+
+== Command Tips
+
+watch 'command | othertool | yet-another-tool'
+
+
+https://unix.stackexchange.com/questions/318859/how-to-use-watch-command-with-a-piped-chain-of-commands-programs

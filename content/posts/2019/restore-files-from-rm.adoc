@@ -1,0 +1,24 @@
+---
+title: Restore Files from rm
+date: 2019-02-12
+categories: ["linux"]
+tags: ["recovery","data","disaster"]
+language: en
+slug: restore-files-from-rm
+---
+
+== Restore files from `rm`
+
+I wanted to type:
+
+ $ rm *.retry
+
+Instead I accidentally typed:
+
+ $ rm * .retry
+
+That wiped out the four or five files I had been working on the last two days.  I was lucky it wasn't more.  I was lucky I didn't care about the binary data I had in the folder.  It took a little time and work, but in the end, I was able to find all the documents.  I would only add to the original stack exchange post that I think it cautious to write your output to a different block device.  In my case `/tmp` has a different volume than my home directory.  You want to minimize all writes to the volume where your data was stored.  If at all possible, unmount the drive.  I'm not sure about how much gets written when you shutdown a system, but you could also either pull the power, at the risk of corrupting other data, or do a clean shutdown, at the risk of overwriting blocks you need.  From there, mounting the block device readonly from a different system would be the safest, though has the drawback of requiring you to remove the device from one machine and connect it to another.
+
+ $ sudo grep -i -a -C100 'string' /dev/fedora/home > /tmp/file.txt
+
+https://unix.stackexchange.com/questions/2677/recovering-accidentally-deleted-files
