@@ -1,0 +1,35 @@
+---
+title: Managing Certificates
+date: 2019-03-14
+categories: ["tips","linux"]
+tags: ["bash","certificates"]
+language: en
+slug: cert-tips
+---
+
+== Managing Certificates
+
+My favorite quick ref:
+
+https://www.sslshopper.com/article-most-common-openssl-commands.html
+
+
+=== Checking certificates on OpenShift 
+
+You could just as easily modify this for other applications.
+
+[source]
+----
+# cat << 'EOF' >> check-certs.sh
+#!/bin/bash
+
+for filename in `find /etc/origin -name "*.crt*" -o -name "*.pem*" -o -name "*.cer*"` ; do
+  echo $filename;
+  echo "  contains" `grep BEGIN $filename | wc -l`;
+  openssl crl2pkcs7 -nocrl -certfile $filename | openssl pkcs7 -print_certs -text -noout | grep -E "Issuer:|Subject:|Not|CA"
+done
+EOF
+
+# chmod u+x ./check-certs.sh
+# ./check-certs.sh > certs-$(hostname)-$(date +"%Y-%m-%d-%H-%M-%S").log
+----

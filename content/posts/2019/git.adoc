@@ -1,6 +1,6 @@
 ---
 title: Git Tips
-date: 2018-05-21
+date: 2019-05-11
 categories: ["tips"]
 tags: ["tips","git"]
 language: en
@@ -13,3 +13,9 @@ slug: git
 
   $ git config --global credential.helper cache
   $ git config credential.helper 'cache --timeout=3600'
+
+- Set author display on git rebase
+
+  $ git config --add rebase.instructionFormat "(%an <%ae>) %s"
+
+https://stackoverflow.com/questions/35851671/is-there-a-way-to-list-the-commits-author-in-git-rebase-i-interactive
