@@ -1,4 +1,4 @@
-baseURL = "https://btw-blog.apps.opencontainer.io/"
+baseURL = "https://briantward.github.io/"
 defaultContentLanguage = "en"
 enableEmoji = true
 languageCode = "en-us"
@@ -36,7 +36,12 @@ title = "Everyday Linux"
   identifier = "projects"
   url = "/projects/"
 [[menu.pages]]
-  name = "Photos"
+  name = "Publications"
   weight = -90
+  identifier = "publications"
+  url = "/publications/"
+[[menu.pages]]
+  name = "Photos"
+  weight = -80
   identifier = "photos"
   url = "/photos/"
