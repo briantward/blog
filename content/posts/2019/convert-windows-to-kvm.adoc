@@ -1,0 +1,25 @@
+---
+title: Convert Windows Machine to Windows VM in KVM
+date: 2019-05-16
+categories: ["tips","linux"]
+tags: ["bash","kvm","tips","windows"]
+language: en
+slug: convert-windows-to-kvm
+---
+
+== Convert Windows Machine to Windows VM in KVM
+
+Export to windows VM
+
+- https://docs.microsoft.com/en-us/sysinternals/downloads/disk2vhd[Disk2vhd v2.01]
+
+Convert to QEMU KVM
+
+- https://docs.openstack.org/image-guide/convert-images.html[Converting between image formats]
+- https://access.redhat.com/articles/1351473[Converting Virtual Machines from Other Hypervisors to KVM with virt-v2v in RHEL 7]
+
+Keyboard was not working initially
+
+- use oskb - on screen keyboard - to enter password or such
+- go to control panel > programs
+- remove proprietary hardware drivers (Lenovo, bluetooth seems to be culprit for me)
