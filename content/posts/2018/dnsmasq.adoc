@@ -9,6 +9,10 @@ slug: split-dns-vpn-local-dnsmasq
 
 == Split DNS Resolution with VPN DNS and Local DNS
 
+Edit 2019-05-16: This work is superceded by this wonderful feature in NetworkManager now:
+ 
+ - https://fedoramagazine.org/using-the-networkmanagers-dnsmasq-plugin/
+
 Note: does not work as expected.  Trouble with connecting to different wireless networks, as each one needs manual tweak. Need a better solution.
 
 I recently installed a local identity management server with Red Hat
