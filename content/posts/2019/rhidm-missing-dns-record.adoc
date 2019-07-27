@@ -1,0 +1,57 @@
+---
+title: Red Hat Identity Management Server - Missing DNS Record
+date: 2019-07-26
+categories: ["tips"]
+tags: ["rhel","freeipa","IdM","ipa","dns","named"]
+language: en
+slug: rhidm-missing-dns-record
+---
+
+== Red Hat Identity Management Server - Missing DNS Record
+
+Recently my server lab lost power.  Stuff did not come back cleanly, and I needed to get my house back in order.
+
+My Red Hat Identity Management Server, aka freeipa, running on a RHEL7 machine, restarted along with all the other physicals and vms.  
+When the IdM server came back up, I noticed after some time that it had missing DNS records for some of my machines.  Some dependent
+machines and services that required connectivity to those machines were failing, because the DNS was not resolving correctly.  At first I thought it
+strange, and a small quirk since this doesn't happen often.  But after three or more times of power loss and fixing the problem manually by recreating the DNS,
+records I decided it was time to investigate.
+
+Taking a peak at `/var/log/messages` or `journalctl -xe` revealed something deleting the records:
+
+----
+Jul 26 21:21:44 idm.example.com named-pkcs11[1840]: client 192.168.1.2#57611/key host/host1.example.com\@EXAMPLE.COM: updating zone 
+Jul 26 21:21:44 idm.example.com named-pkcs11[1840]: client 192.168.1.2#40684/key host/host1.example.com\@EXAMPLE.COM: updating zone 
+----
+
+Sure looks like the client host itself was the culprit.  As it turns out, I registered my machines with `--enable-dns-updates`.  I did this originally without worrying about the details, and thinking
+this would be nice to have if I used DHCP.  Later on I decided to use static IPs for other reasons, so it really isn't important at the moment.  
+I could turn the feature off, but that still didn't explain why the record was being removed, because the correct IP was still associated to
+the machine's interface.  However, looking at it a bit, I recognized that I had added a bridge, such that the IP address was listed on 
+the bridge rather than the physical interface. Bingo!  I had to switch from `em1` to `ovirtmgmt`.  
+
+On the client:
+
+----
+# cat /etc/sssd/sssd.conf
+[domain/dataxf.com]
+...
+#dyndns_iface = em1
+dyndns_iface = ovirtmgmt
+dyndns_ttl = 2400
+....
+----
+
+Then a quick restart of sssd on the client kicks the change in immediately.
+
+  systemctl restart sssd
+
+Now checking the logs on the IPA server showed the following:
+
+----
+Jul 26 22:12:49 idm named-pkcs11[1840]: client 192.168.1.2#33238/key host/host1.example.com\@EXAMPLE.COM: updating zone 'example.com/IN': deleting rrset at 'host1.example.com' A
+Jul 26 22:12:49 idm named-pkcs11[1840]: client 192.168.1.2#33238/key host/host1.example.com\@EXAMPLE.COM: updating zone 'example.com/IN': adding an RR at 'host1.example.com' A
+Jul 26 22:12:49 idm named-pkcs11[1840]: client 192.168.1.2#39324/key host/host1.example.com\@EXAMPLE.COM: updating zone 'example.com/IN': deleting rrset at 'host1.example.com' AAAA
+----
+
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/linux_domain_identity_authentication_and_policy_guide/managing-dynamic-dns-updates#dns-dynamic-updates-client

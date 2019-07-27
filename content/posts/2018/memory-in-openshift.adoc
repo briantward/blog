@@ -69,6 +69,10 @@ Call the stats summary API:
 
  # curl -H "Authorization: Bearer <redacted>" https://127.0.0.1:10250/stats/summary -k -o stats.json
 
+If you are on a master you can do this with certs in one call instead of tokens:
+
+ # curl -v --cacert /etc/origin/master/ca.crt --key /etc/origin/master/admin.key --cert /etc/origin/master/admin.crt https://127.0.0.1:10250/stats/summary -k
+
 A typical memory report from the kubernetes stats summary API:
 
      "memory": {
