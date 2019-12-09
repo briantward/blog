@@ -1,0 +1,27 @@
+---
+title: Create Root Access from any Build in OpenShift
+date: 2019-12-09
+categories: ["tips","openshift"]
+tags: ["builds","root"]
+language: en
+slug: openshift-root-access-on-build
+---
+
+== Create Root Access from any Build in OpenShift
+
+TODO: split examples, show DC options
+
+This example adds an SCC permission to run root on the default service account, allowing you to run root containers.  This is not recommended for normal practice and should only be done during troubleshooting, on an isolated nonprod worker node.  You could also choose to create a service account specific to this one application and configure the DeploymentConfig to use that (this is not shown here).
+
+The second step makes a dependent build that does nothing more than change your user to root within the dockerfile.  
+
+[source]
+----
+$ oc new-project ${PROJECT_NAME}
+$ oc adm policy add-scc-to-user anyuid -z default -n ${PROJECT_NAME}
+$ mkdir temp && cd temp
+$ printf 'FROM ${IMAGE_NAME} \nUSER 0' > Dockerfile
+$ oc new-build --name=$IMAGE_NAME-root .
+$ oc start-build $IMAGE_NAME-root --from-file=.
+$ oc new-app $IMAGE_NAME-root
+----

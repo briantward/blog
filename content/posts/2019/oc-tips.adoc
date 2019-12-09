@@ -1,0 +1,23 @@
+---
+title: oc Tips
+date: 2018-08-11
+categories: ["tips"]
+tags: ["oc"]
+language: en
+slug: oc-tips
+---
+
+== OC Command Tips
+
+ $ oc login -u system:admin
+
+ $ oc whoami --config=$HOME/.kube/config
+ 
+Show all resources... and I mean ALL:
+
+ $ kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get --show-kind --ignore-not-found -n openshift-monitoring
+
+Show docker images on node for each node found in pods listing. (Thanks Todd Penn)
+
+ $ for node in $(oc get pods -o jsonpath='{range .items[*].spec}{.nodeName}{" "}{end}'); do echo $node; ssh $node "docker images";done
+

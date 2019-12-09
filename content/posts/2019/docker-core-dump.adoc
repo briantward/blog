@@ -1,0 +1,59 @@
+---
+title: Docker Core Dumps
+date: 2019-12-09
+categories: ["openshift","docker"]
+tags: ["core","dump"]
+language: en
+slug: docker-core-dump
+---
+
+== Docker Core Dumps
+
+
+. Get the container id (CID) of the pod to be checked. From the node running the pod. You will need to be able to identify your container ID.
+ 
+  # docker ps
+  # CID=xxx
+
+. Check if docker is logging
+
+  # docker logs <CID>
+
+. Check node's journal
+
+  # journalctl CONTAINER_ID=<CID>
+
+. Grab `lsof` and `gcore` for each process: `dockerd-current`, `docker-containerd-current`, and `docker-containerd-shim-current`.  This will show us open files from each process as well as provide a core dump of the running process. 
+
+  # lsof -p `pidof dockerd-current` > dockerd-lsof.txt
+  # gcore -o containerd `pidof docker-containerd-current`
+  # bzip2 dockerd.`pidof dockerd-current`
+
+
+  # lsof -p `pidof docker-containerd-current` > containerd-lsof.txt
+  # gcore -o containerd `pidof docker-containerd-current`
+  # bzip2 containerd.`pidof docker-containerd-current`
+
+
+  # lsof -p `pidof docker-containerd-shim-current for <CID>` > shim-lsof.txt
+  # gcore -o shim `pidof docker-containerd-shim-current for <CID>`
+  # bzip2 shim.`pidof docker-containerd-shim-current for <CID>`
+
+
+
+Also useful:
+
+- Check if docker is logging
+
+  # docker logs <CID>
+
+- Check node's journal
+
+  # journalctl CONTAINER_ID=<CID>
+
+- Show all CIDs being logged to this nodes journal. +
+  NOTE: should be ran exactly as is, do not replace CONTAINER_ID with an actual CID or you'll get an error
+
+  # journalctl -F CONTAINER_ID
+
+

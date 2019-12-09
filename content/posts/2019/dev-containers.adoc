@@ -1,0 +1,27 @@
+---
+title: Red Hat Certified Developer Containers
+date: 2019-11-17
+categories: ["tips","linux"]
+tags: ["containers","Red Hat","developers"]
+language: en
+slug: dev-containers 
+---
+
+== Red Hat Certified Developer Containers
+
+
+- registry.redhat.io/rhscl/devtoolset-8-toolchain-rhel7 +
+  https://access.redhat.com/containers/#/registry.access.redhat.com/rhscl/devtoolset-8-toolchain-rhel7 +
+  Platform for building C/C++ applications using Red Hat Developer Toolset 7. Red Hat Developer Toolset is a Red Hat offering for developers on the Red Hat Enterprise Linux platform. It provides a complete set of development and performance analysis tools that can be installed and used on multiple versions of Red Hat Enterprise Linux. Executables built with the Red Hat Developer Toolset toolchain can then also be deployed and run on multiple versions of Red Hat Enterprise Linux.
+
+- registry.redhat.io/rhscl/devtoolset-8-perftools-rhel7 +
+  https://access.redhat.com/containers/#/registry.access.redhat.com/rhscl/devtoolset-8-perftools-rhel7 +
+  Performance tools: systemtap, valgrind, dyninst, elfutils, oprofile ltrace dwz make memstomp strace
+
+- registry.redhat.io/devtools/llvm-toolset-rhel7 +
+  https://access.redhat.com/containers/#/registry.access.redhat.com/devtools/llvm-toolset-rhel7 +
+  The LLVM back-end compiler and core libraries provide a modern source- and target-independent optimizer, along with code generation support for the RHEL CPU architectures.
+
+- registry.redhat.io/devtools/go-toolset-rhel7 +
+  https://access.redhat.com/containers/#/registry.access.redhat.com/devtools/go-toolset-rhel7 +
+  Go Toolset available as a container is a base platform for building and running various Go applications and frameworks. Go is an easy to learn, powerful, statically typed language in the C/C++ tradition with garbage collection, concurrent programming support, and memory safety features.

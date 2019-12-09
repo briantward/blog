@@ -1,0 +1,21 @@
+---
+title: Lenovo Intel i915 Video Drivers in Linux, Part 3
+date: 2019-11-18
+categories: ["linux"]
+tags: ["linux","intel","i915","video","T460s","Lenovo"]
+language: en
+slug: lenovo-linux-intel-i915-video-part3
+---
+
+== Lenovo Intel i915 Video Drivers in Linux, Part 3
+
+Problem Scenario/Steps: +
+Lenovo T460s +
+thinkpad ultra dock P/N SD20A06046 Type 40A2 S/N M3-A0AC8E 16/11+
+fedora 26/27/28/29, according to my records any kernel since 4.15.9-300.fc27.x86_64
+
+1. Dock laptop in docking station with two connected monitors, one HDMI and one DVI.
+2. Undock laptop.
+3. Redock laptop -> screen failure and system lock until undock again.  Leave it long enough and it will reboot itself.
+
+This issue was resolved by work in the 4.20 kernel!

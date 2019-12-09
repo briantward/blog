@@ -127,3 +127,117 @@ from comment #6
 https://github.com/google/cadvisor/blob/master/info/v1/container.go#L338-L373
 
 
+
+Cgroups, cAdvisor, heapster, and docker 
+
+master API health stats/summary
+-----------------------------------------------
+curl -k -H "Authorization: Bearer <redacted>" https://127.0.0.1:10250/stats/summary
+
+cAdvisor 
+-----------------------------------------------
+  only reports memory.usage_in_bytes (VERIFY in code)
+
+
+1. Every 10-30 seconds, the the cAdvisor compiled in to the node collects new metrics from the system by inspecting cgroups, among other things.  These metrics are kept around for exposing via the Kubernetes stats summary API, and Kubernetes stats legacy API.
+
+2. Every `metrics_resolution`, Heapster will query each node via one of the two aforementioned APIs.  I believe the default for OpenShift 3.5 uses the stats summary API (you can confirm by looking at the Heapster RC, and seeing if it uses `--source=kubernetes.summary_api:<some stuff>` (summary) or `--source=kubernetes:<some stuff>` legacy.
+  
+  For the summary API, this looks more or less like `curl -H "Authorization: Bearer <Heapster service account token>" https://$NODE_IP:10250/stats/summary`
+
+3. For CPU, Heapster takes the most recent data point of cumulative CPU time and combines it with the new data point to form the CPU usage rate.  Importantly, duplicate batches of metrics, or metrics whose pod start time does not match the previous batch's start time, will cause missing data points here.
+
+4a. kubectl top then queries Heapster at the `/apis/metrics/v1alpha1/namespaces/<somens>/pods` to get metrics for the given pod.
+
+4b. For the dashboard, Heapster pushes each new data batch to Hawkular.  The dashboard the queries Hawkular for metrics.
+
+
+docker 
+-----------------------------------------------
+  memory.usage_in_bytes and subtracts "cache" 
+
+
+ cli/command/container/stats_helpers.go
+
+As of docker 1.18:
+https://github.com/docker/cli/blob/master/cli/command/container/stats_helpers.go#L230
+
+Docker 1.13.x:
+mem = float64(v.MemoryStats.Usage)
+https://github.com/moby/moby/blob/1.13.x/cli/command/container/stats_helpers.go#L116
+https://github.com/moby/moby/blob/1.13.x/vendor/github.com/opencontainers/runc/libcontainer/cgroups/stats.go
+
+
+Docker 1.12.x:
+s.Memory = float64(v.MemoryStats.Usage)
+https://github.com/moby/moby/blob/1.12.x/api/client/container/stats_helpers.go#L122
+https://github.com/moby/moby/blob/1.12.x/vendor/src/github.com/opencontainers/runc/libcontainer/cgroups/stats.go
+https://github.com/moby/moby/blob/1.12.x/docs/admin/runmetrics.md
+https://github.com/moby/moby/blob/1.12.x/docs/reference/commandline/stats.md
+https://github.com/moby/moby/blob/1.12.x/vendor/src/github.com/docker/engine-api/types/stats.go
+
+
+heapster
+-----------------------------------------------  
+
+cgroups
+-----------------------------------------------
+  memory.usage_in_bytes		 # show current usage for memory
+				 (See 5.5 for details)
+ memory.memsw.usage_in_bytes	 # show current usage for memory+Swap
+				 (See 5.5 for details)
+
+emory.stat file includes following statistics
+
+# per-memory cgroup local status
+cache		- # of bytes of page cache memory.
+rss		- # of bytes of anonymous and swap cache memory (includes
+		transparent hugepages).
+rss_huge	- # of bytes of anonymous transparent hugepages.
+mapped_file	- # of bytes of mapped file (includes tmpfs/shmem)
+pgpgin		- # of charging events to the memory cgroup. The charging
+		event happens each time a page is accounted as either mapped
+		anon page(RSS) or cache page(Page Cache) to the cgroup.
+pgpgout		- # of uncharging events to the memory cgroup. The uncharging
+		event happens each time a page is unaccounted from the cgroup.
+swap		- # of bytes of swap usage
+
+
+
+prometheus
+-----------------------------------------------
+
+crio
+-----------------------------------------------
+
+
+
+
+With regards to ``docker stats``:
+
+It actually calculates using memory.usage_in_bytes and subtracts "cache" from the memory.stats output [1,2]. Docker made this change to more closely reflect memory usage that sysadmins were used to seeing when using the ``top`` command [4].
+
+Here we see the comment from BEFORE docker made the change, as docker was showing memory usage_in_bytes back then:
+
+>> The statistics of RES and memory cgroup are different, the RES does not take caches into account, but the memory cgroup does, that's why MEM USAGE in docker stats is much more than RES in top [4]
+
+The difficult part of that comment is that one might read that's the way they continue to do it today.  However, this PR [1] shows that they did bend to the will of those who opened that issue, and they changed the memory report to remove cache.  
+
+cAdvisor only reports memory.usage_in_bytes (VERIFY in code)
+
+However, the cgroups kernel team still thinks the best calculation for memory usage would be RSS+CACHE(+SWAP)
+values in memory.stat [3]. Also note that RSS here is not the same as RES on ``top`` as explained at the bottom of section 5.2 of cgroups memory documentation [3].
+
+>> Only anonymous and swap cache memory is listed as part of 'rss' stat.
+	This should not be confused with the true 'resident set size' or the
+	amount of physical memory used by the cgroup.
+	'rss + mapped_file" will give you resident set size of cgroup.
+	(Note: file and shmem may be shared among other cgroups. In that case,
+	 mapped_file is accounted only when the memory cgroup is owner of page
+	 cache.)
+
+[1] https://github.com/docker/cli/pull/80/files#diff-6461907ebcb6301af53f701fc953b949R229
+[2] https://github.com/moby/moby/issues/35530
+[3] https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
+[4] https://github.com/moby/moby/issues/10824
+

@@ -1,0 +1,154 @@
+---
+title: Gluster Tips
+date: 2019-10-19
+categories: ["linux","gluster"]
+tags: ["tips"]
+language: en
+slug: gluster-tips
+---
+
+== Gluster Tips
+
+=== Setting Gluster Up for RHV Host
+
+ # yum install glusterfs-server -y
+ # service glusterd start
+ # gluster v create vmstore localhost:/your/brick force
+ # gluster v start vmstore
+ # mount -t glusterfs localhost:/vmstore /var/lib/libvirt/images
+
+ # gluster v set vmstore group virt
+
+Adjust ownership to qemu user
+
+ # gluster volume set gkvms storage.owner-uid 36
+ # gluster volume set gkvms storage.owner-gid 36
+
+Stop glusterd. This little bash script ensures it's all down.
+
+[source]
+----
+service glusterd stop
+if [ $? -ne 0 ]; then
+    # SIGKILL glusterd
+    pkill -9 glusterd
+fi
+----
+
+[source]
+----
+# Kill all stale gluster processes using SIGKILL first
+pgrep gluster
+if [ $? -eq 0 ]; then
+    pgrep gluster | xargs kill -9
+fi
+----
+
+TODO review this:
+[source]
+----
+# Remove files and directories in /var/lib/glusterd except hooks directory.
+# As these files and directory will be re-created freshly when glusterd
+# is re-started except the "hooks". But all the configuration information
+# will be gone, including the volfiles and peer info.
+for file in /var/lib/glusterd/*
+do
+    if ! echo $file | grep 'hooks' >/dev/null 2>&1;then
+        rm -rf $file
+    fi
+done
+
+# Remove the export bricks
+rm -rf "/bricks/*"
+
+
+$ ansible rhv -m shell -a './glusterkill.sh'
+$ ansible rhv -m shell -a 'gdeploy -c lv_cleanup.conf'
+$ ansible rhv -m shell -a 'lsblk'
+----
+
+=== Some Gluster Notes
+
+==== Brick Requirements
+
+- a volume is built from bricks that are a 512 byte inode XFS file system on each server
+  - RHGS needs more room to storemetadata. 
+  - Do not forget to set the inode size to 512 bytes when creating XFS file systems because the default is 256. 
+  - Use 1024 bytes if planning to use Unified File and Object Storage.
+- ideally bricks match in size on each server for replication or distribution
+- bricks can be provisioned as thin logical volumes to overcommit available space
+
+=== Production Recommendation
+
+- use RAID 6 of 12 drives as backend storage, with stripe size set to match the average file size for optimal performance
+- note small file workloads are suboptimal in replication because of the overhead involved in opening and closing the file on N times for all N replicated bricks
+
+=== Firewall Requirements
+
+ # firewall-cmd --add-service=glusterfs
+ # firewall-cmd --add-service=glusterfs --permanent
+
+
+=== Creating a Thinpool in a Volume Group
+
+Allocate total Thinpool of 10GB:
+
+ # lvcreate -L 10G -T vg_bricks/tpool-a
+
+Allocate one LVM of 2GB inside the 10GB Thinpool:
+
+ # lvcreate -V 2G -T vg_bricks/tpool-a -n brick-a1
+
+Create the XFS filesystem:
+
+ # mkfs -t xfs -i size=512 /dev/vg_bricks/brick-a1
+
+Create a mount point:
+
+ # mkdir -p /bricks/brick-a1
+
+Add the mount to fstab:
+ 
+ # echo "/dev/vg_bricks_brick-a1 /brick/brick-a1 xfs 1 2" >> /etc/fstab
+
+Mount the filesystem:
+
+ # mount -a
+
+Create a director for the brick data:
+
+ # mkdir /bricks/brick-a1/brick
+
+Set the SELinux Context:
+
+ # semanage fcontext -a -t glusterd_brick_t /bricks/brick-a1/brick
+ # restorecon -Rv /bricks/brick-a1
+
+
+==== Deleting a brick
+
+- do not reuse brick folders for new bricks because they leave metatdata in extended attributes
+
+ getfattr -d -m'.*' <BRICK-DIRECTORY> 
+
+
+==== Script for listing your bricks if using numbering schema
+
+[source]
+----
+for BRICKNUM in {0..6}; do
+   for NODE in {a..d}; do
+       echo server${NODE}:/bricks/brick-${NODE}${BRICKNUM}/brick
+   done
+ done > /tmp/bricklist
+----
+
+==== Gluster Clients
+
+- all clients should use the same version
+- upgrade all servers before upgrading the clients
+- mount with backup servers available if primary is not
+  
+ storage-server-1:/volume /mnt/volume glusterfs _netdev,backup-volfile-servers=storage-server-2:storage-server-3 0 0
+
+- Specify the _netdev mount option because a working network connection is needed to access the volume.

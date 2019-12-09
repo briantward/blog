@@ -1,0 +1,15 @@
+---
+title: Rsync Tips
+date: 2019-12-09
+categories: ["rysnc"]
+tags: ["tips"]
+language: en
+slug: rsync-tips
+---
+
+== Rsync Tips
+
+
+- Be careful with trailing slashes with `rsync`.  Always test behavior first. Excluded directories are relative to the second-to-last folder of the copy-from arg.  Here I am copying the `some` folder.  But in order to exclude folders directly beneath `some`, I must still reference `some` in the exclusion.  Note the trailing slash at the remote location, which means the `some` folder is copied into `/bk/` rather than replacing the contents of `/bk` with the contents of `some`.
+
+ rsync -av --delete --delete-excluded --exclude={"some/folder-A","some/folder-B"} /home/user/some remote-sys:/bk/

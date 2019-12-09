@@ -1,0 +1,24 @@
+---
+title: Installing Integr8tly
+date: 2019-11-18
+categories: ["openshift","linux"]
+tags: ["fuse","integreatly","integr8tly","integration"]
+language: en
+slug: integr8tly-installation
+---
+
+== Installing Integr8tly
+
+TODO: clean up and sort out steps, using container installer
+
+[source]
+----
+git clone -b fix-verify-launcher https://github.com/briantward/installation.git
+oc login ${OCP_MASTER_URL}
+ansible.cfg
+id_rsa
+inventories/hosts
+ansible -m ping all
+ansible-playbook -i inventories/hosts playbooks/install.yml
+pip install jsonpointer
+----

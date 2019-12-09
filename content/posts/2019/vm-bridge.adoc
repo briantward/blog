@@ -1,6 +1,6 @@
 ---
 title: Bridged Host-VM Network
-date: 2018-05-01T08:27:00-04:00
+date: 2019-12-09
 categories: ["networking"]
 tags: ["bridge", "virtual","machine"]
 language: en
@@ -200,7 +200,40 @@ image:/images/vm-bridge/030-qemu-network-connections-add-bridge.png[]
 
 == Using nm-tui
 
+This is intuitively the same as the GUI.  If I have a chance to do screen shots one day I may update this.  But as you see below the CLI option is very clean and simple.
+
 == Using nm-cli
+
+Doing this on CLI is quite nice and clean.  Bridge 192.168.1.2 on interface em1:
+
+ nmcli con add type bridge ifname br0 ip4 192.168.1.2/24 gw4 192.168.1.1 ipv4.dns 192.168.1.1 autoconnect yes ipv4.dns-search example.com
+ nmcli con modify em1 master bridge-br0 slave-type bridge
+ nmcli connection up em1
+
+To see the details of the bridge:
+
+ nmcli con show bridge-br0
+
+ virsh iface-list --all
+
+I migrated a kvm image from one host to another, following these instructions:
+
+ virsh dumpxml VMNAME > domxml.xml
+
+https://serverfault.com/questions/434064/correct-way-to-move-kvm-vm
+
+And made sure the bridge was named correctly for the new host:
+
+    <interface type='bridge'>
+      <mac address='52:54:00:8e:3c:67'/>
+      <source bridge='br0'/>
+      <model type='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+    </interface>
+
+Then installed the copied image on the new host with the new bridge:
+
+ virsh define domxml.xml
 
 == Debugging
 

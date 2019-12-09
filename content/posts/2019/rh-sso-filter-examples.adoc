@@ -1,0 +1,50 @@
+---
+title: RH-SSO Filter Examples
+date: 2019-12-09
+categories: ["rhsso"]
+tags: ["keycloak","undertow"]
+language: en
+slug: rh-sso-filter-examples 
+---
+
+== RH-SSO Filter Examples
+
+This Undertow filter prevents certain IP addresses from access resources on the server.
+
+[source]
+----
+        <subsystem xmlns="urn:jboss:domain:undertow:3.1">
+            <buffer-cache name="default"/>
+            <server name="default-server">
+                <http-listener name="default" socket-binding="http" redirect-socket="https"/>
+                <https-listener name="https" record-request-start-time="true" security-realm="CertificateRealm" socket-binding="https"/>
+                <host name="default-host" alias="localhost">
+                    <location name="/" handler="welcome-content"/>
+                    <access-log pattern="%{i,X-Forwarded-For} %h %l %u %t &quot;%r&quot; %s %b &quot;%{i,Referer}&quot; &quot;%{i,User-Agent}&quot; &quot;%{i,COOKIE}&quot; &quot;%{o,SET-COOKIE}&quot; %S &quot;%I&quot; %T"/>
+                    <filter-ref name="my-proxy-peer-address" predicate="equals(%p,8443)"/>
+                    <filter-ref name="kc-account-update-reject"/>
+                    <filter-ref name="kc-admin-reject"/>
+                </host>
+            </server>
+            <servlet-container name="default">
+                <jsp-config/>
+                <websockets/>
+            </servlet-container>
+            <handlers>
+                <file name="welcome-content" path="${jboss.home.dir}/welcome-content"/>
+            </handlers>
+            <filters>
+                <expression-filter name="my-proxy-peer-address" expression="proxy-peer-address"/>
+                <expression-filter name="kc-account-update-reject" expression="method(POST) and regex('/auth/realms/(.*)/account') -> response-code(403)"/>
+                <expression-filter name="kc-admin-reject" expression="regex('(^/auth$)|(^/auth/admin)|(^/auth/realms/master)') and not regex(pattern='(155\.155\.155\.155)|(154\.154\.154\.154)', value='%{i,X-Forwarded-For}', full-match=false) and not regex(pattern='^192\.168\.(1|2|3)\.([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))$', value='%a', full-match=false)-> response-code(403)"/>
+            </filters>
+        </subsystem>
+----
+
+Where 155.155.155.155 and 154.154.154.154 are only allowed public source IPs for the admin console, and internal subnets are 192.168.1.0-225 , 192.168.2.0-255, 192.168.3.0-255 are allowed.  There is an Undertow filter for IP access allow; however, at the time of this work, it does not know CIDR notation.  Check to see that it has not been implemented yet.
+
+TODO: implement CIDR notation IP access filter in undertow.  Link JIRA.
+
+https://access.redhat.com/solutions/3476101
+
+https://access.redhat.com/solutions/3667201

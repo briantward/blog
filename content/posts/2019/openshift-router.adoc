@@ -1,0 +1,37 @@
+---
+title: OpenShift Router Quick Links
+date: 2019-12-09
+categories: ["openshift"]
+tags: ["router"]
+language: en
+slug: openshift-router
+---
+
+== OpenShift Router quick links
+
+router balancing
+
+router environment variables
+
+- https://docs.openshift.com/container-platform/3.7/architecture/networking/routes.html#env-variables
+- https://docs.openshift.com/container-platform/3.6/architecture/networking/routes.html#load-balancing
+- https://docs.openshift.com/container-platform/3.11/architecture/networking/routes.html#route-specific-annotations
+- https://docs.openshift.com/container-platform/3.7/architecture/networking/routes.html#routes-sticky-sessions
+- https://docs.openshift.com/container-platform/3.7/dev_guide/routes.html#dev-guide-routes-allowing-endpoints-to-control-cookies
+
+passthrough
+
+- https://github.com/openshift/origin/commit/a4815c6314f9df1d2ce8060216d0924181c48b6c +
+  Changed the router default to roundrobin if non-zero weights are used +
+  https://bugzilla.redhat.com/show_bug.cgi?id=1416869
+
+
+stick sessions in haproxy
+
+- https://www.haproxy.com/blog/load-balancing-affinity-persistence-sticky-sessions-what-you-need-to-know/
+- http://www.haproxy.org/download/1.8/doc/configuration.txt (3.11)
+
+kubernetes service
+
+- https://kubernetes.io/docs/concepts/services-networking/service/
+

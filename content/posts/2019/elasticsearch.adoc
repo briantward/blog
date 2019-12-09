@@ -1,0 +1,61 @@
+---
+title: ElasticSearch on OpenShift
+date: 2019-11-17
+categories: ["openshift","linux"]
+tags: ["elasticsearch"]
+language: en
+slug: elasticsearch
+---
+
+== ElasticSearch on OpenShift
+
+- Node Tuning
+
+ $ sysctl -w vm.max_map_count=262144
+ $ echo "vm.max_map_count=262144" > /etc/sysctl.d/90-logging.conf
+
+https://github.com/openshift/openshift-ansible/blob/release-3.11/playbooks/openshift-logging/private/config.yml#L94-L116
+
+https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html
+
+- Get indices, run from inside container
+
+ curl --key /etc/elasticsearch/secret/admin-key --cert /etc/elasticsearch/secret/admin-cert --cacert /etc/elasticsearch/secret/admin-ca https://localhost:9200/_cat/indices -s
+
+- Delete red indices, run from inside container
+
+ for i in $(curl --key /etc/elasticsearch/secret/admin-key --cert /etc/elasticsearch/secret/admin-cert --cacert /etc/elasticsearch/secret/admin-ca https://localhost:9200/_cat/indices -s | grep red | awk '{print $3}'); do curl --key /etc/elasticsearch/secret/admin-key --cert /etc/elasticsearch/secret/admin-cert --cacert /etc/elasticsearch/secret/admin-ca https://localhost:9200/$i -X DELETE; done
+
+- Explain allocation, frun from inside container
+ 
+ curl --key /etc/elasticsearch/secret/admin-key --cert /etc/elasticsearch/secret/admin-cert --cacert /etc/elasticsearch/secret/admin-ca https://localhost:9200/_cluster/allocation/explain -s
+
+
+- Change kibana nodeSelector to run it on a different node
+
+ oc patch dc  logging-kibana -p '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname": "NODENAME"}}}}}'
+
+- Change ElasticSearch nodeSelector to run it on a different node
+
+ oc patch deploymentconfig.apps.openshift.io/logging-es-data-master-edoju9ue -p '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname": "NODENAME"}}}}}'
+
+- Other?
+
+ curl -4 -s -XGET --cacert ./path_to_cert/admin-ca --cert ./admin-cert --key ./admin-key https://localhost:9200/_cat/indices?v --insecure
+ curl -4 -s -XGET --cacert ./path_to_cert/admin-ca --cert ./admin-cert --key ./admin-key https://localhost:9200/_cluster/health?level=indices?v --insecure
+
+- See if the PV still has some space (from inside container), there should be a mount point /elasticsearch/persistent/
+
+ # df -h
+
+- research elasticsearch internal logs to see if they could help
+ 
+ /elasticsearch/logging-es/logs/logging-es*
+
+- Shared Stores 
+
+ curl --key /etc/elasticsearch/secret/admin-key --cert /etc/elasticsearch/secret/admin-cert --cacert /etc/elasticsearch/secret/admin-ca https://localhost:9200/_shard_stores -s
+
+
+https://docs.okd.io/latest/install_config/aggregate_logging.html#aggregated-elasticsearch
+

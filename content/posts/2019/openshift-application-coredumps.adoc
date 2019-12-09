@@ -1,0 +1,159 @@
+---
+title: OpenShift Application Core Dumps
+date: 2019-12-09
+categories: ["openshift"]
+tags: ["containers","applications","developers","core","dumps"]
+language: en
+slug: openshift-application-coredumps
+---
+
+== OpenShift Application Core Dumps
+
+- Change the core dump pattern to be processed by systemd
+
+ echo '|/usr/lib/systemd/systemd-coredump %P %u %g %s %t %c %e' > /proc/sys/kernel/core_pattern
+
+- Change the core dump pattern to be written straight to temp file
+
+ echo "/tmp/cores/core.%e.%p.%h.%t" > /proc/sys/kernel/core_pattern
+
+- Change the limits on the node, which should permit all users to capture an unlimited size core dump
+
+[source]
+----
+ ulimit -c unlimited
+ vi /etc/security/limits.conf
+
+ * hard core unlimited
+----
+
+- Make a temp folder
+
+ mkdir -p /tmp/cores
+ chmod a+rwx /tmp/cores
+
+- Kill your application to test the core dump was generated
+
+ kill -s SIGSEGV $$
+
+- If processing with systemd
+
+ /var/lib/systemd/coredump/
+
+- Ensure these values, to allow full daemon process dumping
+
+ sysctl -w fs.suid_dumpable=1
+ sysctl -p
+
+
+
+[1] ruby app was built from the example: oc new-app ruby~https://github.com/openshift/ruby-ex.git
+
+[2] https://github.com/briantward/cakephp-ex/blob/master/httpd-cfg/coredumps.conf
+
+[3] https://en.wikipedia.org/wiki/Signal_(IPC)#List_of_signals
+
+mysql
+
+https://dev.mysql.com/doc/refman/5.7/en/using-system-variables.html
+
+https://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_core_file
+
+Currently, it is not possible to enable the core dump at the node level but disable the core dump in a pod.  There is an RFE opened for this but it has not had any traction due to some upstream issues that need to be satisfied first:
+
+  https://bugzilla.redhat.com/show_bug.cgi?id=1379470
+
+You can, however, use systemd-coredump to manage this:
+
+ https://www.freedesktop.org/software/systemd/man/coredump.conf.html#Options
+
+You could also write a custom filter script and specifying that in the core_pattern, for example:
+
+  # cat /proc/sys/kernel/core_pattern
+  |/usr/libexec/my-custom-core-filter %P %u %g %s %t %c %e
+
+You could then filter the coredumps you want to keep based on patterns or app names (http://man7.org/linux/man-pages/man5/core.5.html).
+
+Acquired from Robert Bost.
+
+
+ # cat /proc/sys/kernel/core_pattern
+ |/usr/lib/systemd/systemd-coredump %P %u %g %s %t %c %e
+
+
+Make sure to include the leading "|" character! This change will be immediately inherited by your pods. When a core dump is triggered in some way, it will be piped through the systemd-coredump command. The core dump will then be stored and managed by systemd. You can impose limits on the amount of storage used by those core dumps by configuring /etc/systemd/coredump.conf:
+
+  https://www.freedesktop.org/software/systemd/man/coredump.conf.html
+
+The MaxUse or KeepFree parameter specifically is what you would be interested in.
+
+Note that some applications (e.g. Java) have the ability to write core dumps using their own functionality (e.g. Java's -XX:OnError flag). So any core dumps written out by applications running in Pods will not be managed by systemd!
+
+If you want to test the functionality above, you can make the change on one node. Schedule a test pod to it. `oc rsh` to that pod and execute `kill -11 <PID>` for the first PID in that Pod (run `ps aux` inside Pod and use first Pid).
+
+Then, back on the node you can execute `coredumpctl list` and you should see a new entry containing the core dump. If you do not see a coredump there it might be due to the coredump ulimit not being set to unlimited. You can change that inside of /etc/security/limits.conf on the node.
+
+
+I also confirmed with other teams the best approach for capturing Core Dumps is by setting CoreDumpDirectory and pointing that directive to a persistent storage location, as given in one of the examples I shared in the other ticket, 02101747.
+
+
+Inside your root application folder being used in the s2i build process:
+
+$ cat httpd-cfg/coredumps.conf
+Core
+
+How to enable core file dumps when an application crashes or segmentation faults 
+https://access.redhat.com/solutions/4896
+
+How to enable coredumps for daemon process (services) in RHEL? 
+https://access.redhat.com/solutions/649193
+
+How to collect core dump file of a crashing program that is shipped in Red Hat Enterprise Linux 6/7? 
+https://access.redhat.com/solutions/56021
+
+How to set sysctl variables on Red Hat Enterprise Linux 
+https://access.redhat.com/solutions/2587
+
+Bug 1596284 - [RFE][GSS] Stop creating core dumps inside gluster pod root directory 
+https://bugzilla.redhat.com/show_bug.cgi?id=1596284
+
+Documentation: Make clear instructions for getting a core file, when container crashes #11740
+https://github.com/moby/moby/issues/11740
+Add "default-ulimits": {"core": {"Name": "core", "Hard": -1, "Soft": -1}} to /etc/docker/daemon.json
+
+Using Red Hat Software Collections Container Images
+https://access.redhat.com/documentation/en-us/red_hat_software_collections/3/html-single/using_red_hat_software_collections_container_images/
+
+How to Extend the rhscl/mariadb-101-rhel7 Container Image 
+https://access.redhat.com/articles/2379991
+
+https://github.com/sclorg/mysql-container/blob/master/5.7/Dockerfile.rhel7
+
+http://man7.org/linux/man-pages/man5/core.5.html
+https://linux.die.net/man/5/limits.conf
+https://www.freedesktop.org/software/systemd/man/systemd-coredump.html
+https://www.freedesktop.org/software/systemd/man/coredump.conf.html
+https://www.freedesktop.org/software/systemd/man/coredumpctl.html
+https://en.wikipedia.org/wiki/Signal_(IPC)#List_of_signals
+
+Apache httpd core file analysis on Red Hat Enterprise Linux 
+https://access.redhat.com/articles/1469
+
+Apache httpd crash on Red Hat Enterprise Linux 
+https://access.redhat.com/solutions/1465
+
+https://github.com/sclorg/s2i-php-container
+
+https://dev.mysql.com/doc/refman/5.7/en/using-system-variables.html
+https://www.percona.com/blog/2011/08/26/getting-mysql-core-file-on-linux/
+http://fromdual.com/hunting-the-core
+
+How to use oc debug (Solution in edit)
+https://access.redhat.com/solutions/3194462
+
+https://access.redhat.com/documentation/en-us/red_hat_developer_toolset/7/html-single/user_guide/
+https://access.redhat.com/documentation/en-us/red_hat_software_collections/3/html/using_red_hat_software_collections_container_images/devtoolset-images
+https://github.com/sclorg/devtoolset-container/tree/master/7-toolchain
+
+https://access.redhat.com/solutions/2168181
+

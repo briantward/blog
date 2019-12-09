@@ -1,0 +1,14 @@
+---
+title: OpenShift Firewall
+date: 2019-12-09
+categories: ["openshift"]
+tags: ["firewall"]
+language: en
+slug: openshift-firewall
+---
+
+== OpenShift Firewall
+
+To add a firewall entry on 3.x, where the firewall installed was `iptables` rather than `firewalld`
+
+ iptables -A OS_FIREWALL_ALLOW -p tcp -m state --state NEW -m tcp --dport 80 -j ACCEPT

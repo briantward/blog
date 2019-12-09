@@ -1,0 +1,36 @@
+---
+title: MiniShift Tips
+date: 2019-12-09
+categories: ["tips","minishift"]
+tags: [""]
+language: en
+slug: minishift-tips
+---
+
+== MiniShift Tips
+
+=== hard cleanup minishift environment 
+
+For example, for errors such as 
+
+ domain 'minishift' already exists with uuid
+
+. Check if the VM is still running 
+  
+ $ sudo virsh list --all
+
+. If it is running, stop the minishift VM 
+
+ $ sudo virsh destroy minishift
+ 
+. Delete the VM 
+
+ $ sudo virsh undefine minishift
+
+. Delete the .minishift/machines dir 
+
+ $ rm -rf ~/.minishift/machines. 
+
+. Or as an extreme step, delete all your minishift settings and start from scratch
+
+ $rm -rf ~/.minishift
