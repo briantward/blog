@@ -9,9 +9,7 @@ slug: security-pipelines
 
 == Security Pipelines in OpenShift Container Platform
 
-TODO
-
-WIP coded at https://github.com/briantward/container-pipelines/tree/parallel-spring-boot
+These are random notes for work in progress coded at https://github.com/briantward/container-pipelines/tree/parallel-spring-boot
 
 - two OCP clusters: nonprod (dev, test, etc) and prod (prod, stage)
 - allow nonprod cluster to continue pulling image updates automatically to registry
@@ -86,25 +84,18 @@ app-prod
  
 
 
-
+[source]
+----
 oc run -i -t tool-box-test --image=quay.io/redhat-cop/tool-box --rm bash
 git clone -b ab-secup https://github.com/briantward/container-pipelines
 cd container-pipelines/basic-spring-boot/
 ansible-galaxy install -r requirements.yml --roles-path=galaxy
 oc login -u developer -p any https://192.168.42.56:8443
 ansible-playbook -i ./.applier/ galaxy/openshift-applier/playbooks/openshift-cluster-seed.yml
-
-master1 and master2 were both restored
-gave up on master1
-
-121 showing symptoms that master1 was showing...
-6 weeks? 
-
-Guaranteed -- Eviction Policy
+----
 
 if security updates are critical or important, move forward, otherwise, do not update
 if dev work not current, then kick off on schedule
-
 
 
 kick off security pipeline
@@ -119,6 +110,8 @@ swap A/B in pipeline (either original or secup)
 - deploys to prod immediately, with the not-current service name used 
 - waits on switching the route from service current to not-current
 
+[source]
+----
 def currentState = 'green'
 def newState = 'blue'
 
@@ -149,7 +142,7 @@ openshift.withCluster() {
               openshift.apply(dc)
             }
           }
-
+----
 
 security gate is one time switch need it to be many
 make regular service-A on start

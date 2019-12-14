@@ -80,7 +80,7 @@ image:/images/vm-bridge/001-qemu-virtual-networks.png[]
 
 This is a suggested flow below for creating a NAT'd isolated network.  It does not bridge
 the vm to the host subnet.  The "Virtual Network Interface" settings on your vm profile 
-used to suggest creating a "bridge" this way.  TODO verify this with earlier image, show example.  
+used to suggest creating a "bridge" this way.   
 
 image:/images/vm-bridge/002-qemu-create-virtual-networks-01.png[]
 image:/images/vm-bridge/003-qemu-create-virtual-networks-02.png[]
@@ -138,7 +138,7 @@ for now.
 image:/images/vm-bridge/012-gnome-network-connections-01.png[]
 
 Click the "+" icon and up pops this dialog.  Choose "Bridge" type. Sorry the image below
-just shows "Ethernet".  TODO show better image.
+just shows "Ethernet".  
 
 image:/images/vm-bridge/014-connmanager-create-network-connection.png[]
 image:/images/vm-bridge/013-gnome-network-connections-02.png[]
@@ -164,12 +164,8 @@ Click "Add" next to "Bridged Connections" to specific which device you want to s
 bridge from.  That is, what physical device or ethernet port is attached to the network 
 you want the VMs to bridge to. In my case, I want "enp0s25".
 
-TODO add images here
-
 Click "Ethernet" in the dialog box this time.  Name this Connection after your network 
 interface, then select the same network interface in the "Device" dropdown. Click Save.
-
-TODO add images here
 
 image:/images/vm-bridge/025-connmanager-edit-network-connection.png[]
 
@@ -182,7 +178,7 @@ Now `virt-manager` go to Edit > Connection Detils > Network Interfaces.
 image:/images/vm-bridge/019-qemu-network-connections.png[]
 
 Click this "+" icon to add your bridge.  It should show up here. If it does not, you may want
-to restart services or reboot the machine. TODO identify which services need rebooting, just NetworkManager? 
+to restart services or reboot the machine.
 
 image:/images/vm-bridge/028-qemu-network-connections-add-bridge.png[]
 

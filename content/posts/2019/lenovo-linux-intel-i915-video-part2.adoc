@@ -202,4 +202,6 @@ Date:   Wed Jan 2 12:26:48 2019 +0000
 ----
 
 
-TODO: patch the 4.19 and 4.18 kernels with the appropriate fixes, starting from https://patchwork.freedesktop.org/patch/261135/.
+Patch the 4.19 and 4.18 kernels with the appropriate fixes, starting from https://patchwork.freedesktop.org/patch/261135/.
+
+This issue was resolve by the 4.20 kernel release.
