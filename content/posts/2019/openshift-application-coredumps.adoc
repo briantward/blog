@@ -9,15 +9,23 @@ slug: openshift-application-coredumps
 
 == OpenShift Application Core Dumps
 
+When logs fail to provide us the information we need to diagnose an application problem, we may find it useful to take core dumps of memory, showing us the processes as they are currently running in the system.  This is not something we want to do on a regular basis in production.  Ideally such problems are discovered during application performance and load testing in lower environments.  In reality we frequently find something unique about the real-world application load that our test scenarios could never uncover.  However, it is also a great practice to do regular analysis of core dumps of your application during its testing phases.  
+
+One of the awesome features of kubernetes and OpenShift in general is the ability to control deployment scenarios.  Unfortunately we don't have a specific feature yet to allow us to capture core dumps only on specific application pods.  However, we can control core dumps by the nodes on which the applications are deployed.  And since we are running kubernetes, we have very simple but powerful control over our application placement.  We can schedule our pods to be deployed on nodes that are ready to capture core dumps while preventing other pods that do not need core dumps to be prevented from running on these same nodes.  
+
+=== Configuring a Node to Capture Core Dumps
+
+These notes are for OpenShift 3.x where you have control over changing the node directly.  I'll share OpenShift 4.x configurations later.
+
 - Change the core dump pattern to be processed by systemd
 
  echo '|/usr/lib/systemd/systemd-coredump %P %u %g %s %t %c %e' > /proc/sys/kernel/core_pattern
 
-- Change the core dump pattern to be written straight to temp file
+- Alternatively, change the core dump pattern to be written straight to temp file
 
  echo "/tmp/cores/core.%e.%p.%h.%t" > /proc/sys/kernel/core_pattern
 
-- Change the limits on the node, which should permit all users to capture an unlimited size core dump
+- Change the limits on the node, which should permit all users to capture an unlimited size core dump.  If you know your application well, you may be able to set this with a more logical numeric restriction.  CAUTION!  You should be aware of the risk of capturing large core dumps.  It would behoove you to have a separate partition for storing them.  
 
 [source]
 ----
@@ -27,45 +35,27 @@ slug: openshift-application-coredumps
  * hard core unlimited
 ----
 
-- Make a temp folder
-
- mkdir -p /tmp/cores
- chmod a+rwx /tmp/cores
-
-- Kill your application to test the core dump was generated
-
- kill -s SIGSEGV $$
-
-- If processing with systemd
-
- /var/lib/systemd/coredump/
-
 - Ensure these values, to allow full daemon process dumping
 
  sysctl -w fs.suid_dumpable=1
  sysctl -p
 
+- Make a temp folder, that matches the folder you specified in your `core_pattern` file
 
+ mkdir -p /tmp/cores
+ chmod a+rwx /tmp/cores
 
-[1] ruby app was built from the example: oc new-app ruby~https://github.com/openshift/ruby-ex.git
+- If processing with systemd, your files will show up here:
 
-[2] https://github.com/briantward/cakephp-ex/blob/master/httpd-cfg/coredumps.conf
+ /var/lib/systemd/coredump/
 
-[3] https://en.wikipedia.org/wiki/Signal_(IPC)#List_of_signals
-
-mysql
-
-https://dev.mysql.com/doc/refman/5.7/en/using-system-variables.html
-
-https://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_core_file
-
-Currently, it is not possible to enable the core dump at the node level but disable the core dump in a pod.  There is an RFE opened for this but it has not had any traction due to some upstream issues that need to be satisfied first:
+RFE for core dumps at pod or container level:
 
   https://bugzilla.redhat.com/show_bug.cgi?id=1379470
 
-You can, however, use systemd-coredump to manage this:
+You can, however, use systemd-coredump to manage this, and configure the MaxUse or KeepFree parameters as explained in the documentation:
 
- https://www.freedesktop.org/software/systemd/man/coredump.conf.html#Options
+ https://www.freedesktop.org/software/systemd/man/coredump.conf.html
 
 You could also write a custom filter script and specifying that in the core_pattern, for example:
 
@@ -77,21 +67,55 @@ You could then filter the coredumps you want to keep based on patterns or app na
 Acquired from Robert Bost.
 
 
- # cat /proc/sys/kernel/core_pattern
- |/usr/lib/systemd/systemd-coredump %P %u %g %s %t %c %e
+=== Testing Core Dumps
+
+- Build and deploy your application.  Here we will use a test application from OpenShift.
+
+ oc new-project test-cores
+ oc new-app ruby~https://github.com/openshift/ruby-ex.git
+
+- Schedule a test pod to your node
+
+- RSH to your pod, find the main application PID, and kill your app
+
+ `oc rsh POD_NAME` 
+ `$ ps aux`
+ `$ kill -11 <PID>` 
 
 
-Make sure to include the leading "|" character! This change will be immediately inherited by your pods. When a core dump is triggered in some way, it will be piped through the systemd-coredump command. The core dump will then be stored and managed by systemd. You can impose limits on the amount of storage used by those core dumps by configuring /etc/systemd/coredump.conf:
+- Kill your application to test the core dump was generated
 
-  https://www.freedesktop.org/software/systemd/man/coredump.conf.html
+ kill -s SIGSEGV $$
 
-The MaxUse or KeepFree parameter specifically is what you would be interested in.
+- On the node, check the location the core dump was written, or if using systemd, run the following:
 
-Note that some applications (e.g. Java) have the ability to write core dumps using their own functionality (e.g. Java's -XX:OnError flag). So any core dumps written out by applications running in Pods will not be managed by systemd!
+ `coredumpctl list`
+
+=== Testing Core Dumps on Apache HTTPD
+
+Apache Web Server handles SIGSEGV itself in a special way.  You must also configure how apache handles this, by setting CoreDumpDirectory and pointing that directive to a persistent storage location within the pod itself.  You could configure a HostPath to go to the same location as other core dumps, but this is an unnecessary security concern, and it is easier and safer to add and remove a PersistentVolume specifically for capturing the core dump.
+
+See the following repo for an example configuration in an s2i build. 
+
+https://github.com/briantward/cakephp-ex/blob/master/httpd-cfg/coredumps.conf
+
+You can also achieve this by using a posthook execution
+
+List of *NIX signals
+
+- https://en.wikipedia.org/wiki/Signal_(IPC)#List_of_signals
+
+=== Testing Core Dumps on Mysql
+
+https://dev.mysql.com/doc/refman/5.7/en/using-system-variables.html
+
+https://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_core_file
+
+=== Testing Core Dumps on Java
+
+-XX:OnError flag
 
 If you want to test the functionality above, you can make the change on one node. Schedule a test pod to it. `oc rsh` to that pod and execute `kill -11 <PID>` for the first PID in that Pod (run `ps aux` inside Pod and use first Pid).
-
-Then, back on the node you can execute `coredumpctl list` and you should see a new entry containing the core dump. If you do not see a coredump there it might be due to the coredump ulimit not being set to unlimited. You can change that inside of /etc/security/limits.conf on the node.
 
 
 I also confirmed with other teams the best approach for capturing Core Dumps is by setting CoreDumpDirectory and pointing that directive to a persistent storage location, as given in one of the examples I shared in the other ticket, 02101747.

@@ -1,0 +1,126 @@
+---
+title: Build A Router
+date: 2019-12-27
+categories: ["rhel"]
+tags: ["router"]
+language: en
+slug: build-a-router
+---
+
+== Build A Router on Red Hat Enterprise Linux 7
+
+This provided a nice resource for reference.footnote:[https://unix.stackexchange.com/questions/217872/centos-7-firewalld-passthrough-traffic-with-firewall-cmd]  I will elaborate a litte more here.  I wanted to set up a custom router to the internet, to provide advanced firewall and logging features.  Note that this example does not provide DHCP services. In my case, I have a secondary off-the-shelf (OTS) router doing that.  Since the OTS router did not offer advanced firewall, NAT, port-forwarding, and such features, I decided to build my own.  Another good option, and perhaps simpler, would be to flash the OTS router with a good firmware alternative such as DD-WRT.  I've done that successfully years ago, but decided I wanted real control over everything by building from scratch.  This may be overkill, but it's an interesting project.  
+
+. Set your interface that will be connected to the public internet to use DHCP provided by your ISP.  This may be ready out of the box on a fresh install, in which case you would just need to plug in the ethernet cable. If you don't know which physical port maps to which interface id, take a moment to figure it out by testing with your internet cable.  If you are wondering why your interface is something like `enp0s25` instead of `eth0` thank the nice engineers who thought this new naming scheme would help identify the exact physical location on your box.  Theoretically this is great if you have a lot of interfaces on one box.footnote:[https://www.freedesktop.org/wiki/Software/systemd/PredictableNetworkInterfaceNames/]footnote:[https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/networking_guide/ch-consistent_network_device_naming]  
+
+ # nmcli con add type ethernet autoconnect yes ifname enp0s25 con-name enp0s25 connection.zone external
++
+FYI `con` is short for `connection`.  The one thing I dislike about `nmcli` is its failure to adhere to any decent cli command trends, such as `COMMAND VERB OBJECT ARGS`, or even just using POSIX syntax.footnote:[https://www.gnu.org/software/libc/manual/html_node/Argument-Syntax.html] So the word of advice here is to look at sets of things, such as `con add`, `type ethernet`, `autoconnect yes`, `ifname enp0s25`, and `con-name enp0s25`.  Note that `con-name` can be something prettier, but by default during installation, it is set to the same as `ifname`. I like to follow the KISS principle and keep it the same. 
++
+This last little tidbit is important, `connection.zone external` as it sets your `firewalld` zone and will be used for routing traffic correctly. You can see the default setting for your external zone has masquerade enabled, which handles NAT routing. You can check it set correctly:
+
+ # nmcli -f connection.zone con show enp0s25
+ connection.zone:                        external
+ # firewall-cmd --list-all --zone=external | grep masquerade
+   masquerade: yes
++
+If you do not see `masquerade: yes` or would like it set on another zone: footnote:[https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/security_guide/sec-configuring_ip_address_masquerading]
+
+ # firewall-cmd --permanent --zone=public --add-masquerade
+ 
+. Set your interface for your local network. Make sure you have the right cable attached to the right interface.  Here I am using a `modify` rather than an `add` just to give an example of changing an interface added during OS installation.  I want a static IP here, and I'm going to borrow Google's DNS server, and make sure it always comes up at boot.
+
+ # nmcli con modify enp1s0f1 ipv4.addresses 192.168.1.1/24 ipv4.dns 8.8.8.8 autoconnect yes connection.zone internal
++
+This last little tidbit is important, `connection.zone internal` as it sets your `firewalld` zone correctly. You can check it set correctly:
+
+ # nmcli -f connection.zone con show enp1s0f1
+ connection.zone:                        internal
+
+
++
+You can verify your routes by running `ip route`.  This would be equivalent to the older `route` command, which is no longer available on a RHEL 7 minimal install.
++
+[source]
+----
+$ ip route
+default via XXX.XXX.XXX.1 dev enp0s25 proto dhcp metric 100 
+default via 192.168.1.1 dev enp1s0f1 proto static metric 102 
+XXX.XXX.XXX.0/24 dev enp0s25 proto kernel scope link src XXX.XXX.XXX.154 metric 100 
+192.168.1.0/24 dev enp1s0f1 proto kernel scope link src 192.168.1.1 metric 102 
+----
+
+
+. Make sure you have adjusted the kernel settings to permit IP forwarding traffic.
+
+ # sysctl -w net.ipv4.ip_forward=1
+
+. Make that setting is persistent across reboots
+
+ # echo net.ipv4.ip_forward = 1 >> /etc/sysctl.conf
+
+. Configure detailed logging.footnote:[https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/security_guide/configuring_logging_for_denied_packets]
+
+ # firewall-cmd --get-log-denied
+ # firewall-cmd --set-log-denied=all
+
+. Lockout any other applications from modifying the firewall.footnote:[https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/security_guide/configuring_firewall_lockdown]
+
+ # firewall-cmd --lockdown-on
+
+=== Reset your interface to the original install defaults
+
+In the event you do damage to your configuration.
+
+ # nmcli con del enp0s25
+
+ # nmcli con add type ethernet autoconnect yes ifname enp0s25 con-name enp0s25
+
+=== Other tips
+
+- Introduction to FirewallD on CentOS
+https://www.linode.com/docs/security/firewalls/introduction-to-firewalld-on-centos
+
+- How to configure Linux as router for sharing internet in RHEL? +
+https://access.redhat.com/solutions/648473
+
+- How to configure RHEL as a router in the middle of a network? +
+https://access.redhat.com/solutions/2854141
+
+- NetworkManager and the Network Scripts +
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/networking_guide/sec-using_networkmanager_with_network_scripts +
+For old school lovers of the network scripts.  Once you learn the ease of `nmcli` you may never go back.  
+
+=== Warning Guidance
+
+Please do not follow any recommendations or instructions from this particular guide for RHEL 7: +
+https://linuxtechlab.com/turning-centosrhel-6-7-machine-router/
+
+I started here because it was one of the first hits with what appeared to be fairly decent information.  Also, I was aware of the 
+implications of using firewalld direct passthrough, which I'll address in a moment.
+
+The command used for their RHEL 7 example is both poorly formatted and bad guidance, for at least four reasons:
+
+Copy and paste command from the example:
+
+ $ firewall-cmd –permanent –direct –passthrough ipv4 -t nat -I POSTROUTING -o XXXX -j MASQUERADE -s 192.168.1.0/24
+
+. First, the character formatting is incorrect.  You will copy and past an elongated single `em dash` rather than two regular dashes
+which will not parse correctly on the command line.
+
+ –permanent
+
+. Second, the character font display on the `I` character on their site is hard to read and discern.  It could be an `l` or maybe even a `1`.  The font character display here, on my site, should be able to help you see exactly which letter is presented. I originally had this problem as I was researching from my phone while my internet service was obviously not working.
+
+ -I POSTROUTING
+
+. Third, using the direct passthrough feature on `firewalld` is discouraged for such simple routing purposes.  There may be a place
+for using it in complex routing scenarios, but that is not here.footnote:[https://firewalld.org/documentation/direct/options.html] 
+
+. Fourth, there is no explanation for any of the configuration.  I am thankful for code snippets shared in open source nature but generally despise lack of explanations.  This is usually a result of monkey-see-monkey-do behavior without being intelligent enough to actually understand what you are doing.  Beware of doing this.  It is important that you not only succeed in doing something right, but you understand why it is right.  
+
+Should you need this command in a good copy paste format, assuming you substitue the device XXXX for your device providing the outbout
+internet service, this would be it.
+
+ $ firewall-cmd --permanent --direct --passthrough ipv4 -t nat -I POSTROUTING -o XXXX -j MASQUERADE -s 192.168.1.0/24
+
