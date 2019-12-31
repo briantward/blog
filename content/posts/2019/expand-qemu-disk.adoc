@@ -1,0 +1,28 @@
+---
+title: Expand a Qemu Disk
+date: 2019-12-31
+categories: ["rhel"]
+tags: ["qemu","disk","expand"]
+language: en
+slug: expand-qemu-disk
+---
+
+== Expand a Qemu Disk
+
+I exhausted the disk space on my Windows VM and found I needed more room.  This is one of those lovely tasks that actually has simple and good documentation and works easily enough.
+
+I followed these instructions using `qemu-resize`:
+
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/virtualization_deployment_and_administration_guide/sect-using_qemu_img-re_sizing_the_disk_image
+
+But you might find this just as helpful:
+
+https://maunium.net/blog/resizing-qcow2-images/
+
+Here is another read on using `virt-resize` instead of `qemu-resize` but a little more to it:
+
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/virtualization_administration_guide/sect-expand-disk-image
+
+After the disk was enlarged, I wondered how I might verify it.  `virt-df` only shows the existing filesystem, and since it only changed the partition, nothing in that output changed.  I suppose the command `virt-list-partitions` might show a difference, but I didn't have that on my system and didn't want to go looking for it.  
+
+Booting into my Windows VM and verifying I had 20G newly available was simple enough.  I used the `Computer Management` > `Storage` > `Disk Management` interface and followed the GUI wizard steps for expanding a volume by Right Clicking on the drive and selecting `Extend Volume`.
