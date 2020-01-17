@@ -1,0 +1,22 @@
+---
+title: bash Tips
+date: 2019-02-01
+categories: ["tips","linux"]
+tags: ["bash"]
+language: en
+slug: bash-tips
+---
+
+== Command Tips
+
+String the watch command with several commands at once
+
+ watch 'command | othertool | yet-another-tool'
+
+https://unix.stackexchange.com/questions/318859/how-to-use-watch-command-with-a-piped-chain-of-commands-programs
+
+This one is useful when you don't have a user directory on the system yet.  
+
+ /sbin/mkhomedir_helper <username> [<umask> [<skeldir>]]
+
+https://serverfault.com/questions/63764/create-home-directories-after-create-users

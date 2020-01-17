@@ -1,0 +1,40 @@
+---
+title: SSH Tips
+date: 2020-01-15
+categories: ["tips"]
+tags: ["ssh","tunnel","keygen"]
+language: en
+slug: ssh-tips
+---
+
+== SSH Tips
+
+=== SSH Tunnel
+ 
+ $ ssh user@remote-host -L 9993:remote-host:9993
+
+=== SSH Keyen
+
+ $ ssh-keygen -t rsa -b 4096 -C "email organization"
+
+=== SSH-Forwarding
+
+Like this guy's example.  After using `nc` for years, `ProxyJump` is now very useful!
+
+[source]
+----
+Host forum
+        HostName www.nixcraft.com
+        ProxyJump vivek@jumhost.nixcraft.com:22
+        User vivek
+----
+
+https://www.cyberciti.biz/faq/linux-unix-ssh-proxycommand-passing-through-one-host-gateway-server/
+
+=== ForwardAgent
+
+https://heipei.io/2015/02/26/SSH-Agent-Forwarding-considered-harmful/
+
+=== Sshuttle
+
+ sshuttle --dns -r HOSTNAME 192.168.1.0/24 -v
