@@ -33,8 +33,12 @@ https://www.cyberciti.biz/faq/linux-unix-ssh-proxycommand-passing-through-one-ho
 
 === ForwardAgent
 
+I'm not truly certain about the security implications of using ForwardAgent, but this article does suggest there are some issues.  Regardless, the `ProxyJump` feature seems to handle everything I need.
+
 https://heipei.io/2015/02/26/SSH-Agent-Forwarding-considered-harmful/
 
 === Sshuttle
+
+This is useful for forwarding DNS requests through to another network, so that you can make local DNS requests in that network, without building a whole VPN service.
 
  sshuttle --dns -r HOSTNAME 192.168.1.0/24 -v
