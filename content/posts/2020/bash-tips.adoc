@@ -1,6 +1,6 @@
 ---
 title: bash Tips
-date: 2019-02-01
+date: 2020-02-01
 categories: ["tips","linux"]
 tags: ["bash"]
 language: en

@@ -1,0 +1,456 @@
+---
+title: An Introduction to Running Java on Kubernetes
+date: 2020-02-12
+categories: ["kubernetes","java","linux","OpenShift"]
+tags: ["kubectl","pod","deployment"]
+language: en
+slug: running-java-on-kubernetes
+---
+
+== An Introduction to Running Java on Kubernetes
+
+You will need access to a container build tool, a container runtime environment, and a kubernetes environment.  There will be suggestions along the way for acquiring these.  You will need a virtualization technology to run the `minikube` or `minishift` VMs for your kubernetes development environment.
+
+== Build a Demo Spring Boot App
+
+. Build an app
++
+[source]
+----
+$ mkdir -p my-java-app/container
+$ cd my-java-app
+$ git clone https://github.com/spring-guides/gs-spring-boot.git
+$ cd gs-spring-boot/complete
+$ ./mvn package
+$ cd ../../
+$ mv gs-spring-boot/complete/target/spring-boot-0.0.1-SNAPSHOT.jar container/spring-boot-0.0.1-SNAPSHOT.jar
+----
+
+. Test the app locally to make sure it built right and works!
++
+[source]
+----
+$ java -jar container/spring-boot-0.0.1-SNAPSHOT.jar
+$ curl http://localhost:8080
+----
+
+https://spring.io/guides/gs/spring-boot/
+
+== OpenShift
+
+=== Build an OpenShift Development Environment
+
+[source]
+----
+$ minishift start
+----
+
+Or CodeReady Containers
+
+[source]
+----
+$ crc setup
+$ crc start
+----
+
+
+[source]
+----
+$ oc new-project java-fun
+$ oc new-build --name myapp .
+$ oc start-build myapp --from-dir=. --follow 
+$ oc new-app myapp
+$ oc logs -f myapp-1-kbqsf 
+$ oc create service clusterip myapp --tcp=8080:8080
+$ oc expose service myapp
+$ oc get pod/myapp-1-kbqsf -o yaml | less
+----
+
+== Kubernetes
+
+. Create the components of your container image
++
+[source]
+----
+$ ls
+container  gs-spring-boot-master
+
+$ cd container
+
+$ echo 'FROM openjdk:11
+
+COPY spring-boot-0.0.1-SNAPSHOT.jar /spring-boot-0.0.1-SNAPSHOT.jar
+
+CMD java -jar /spring-boot-0.0.1-SNAPSHOT.jar' > Dockerfile
+
+$ ls
+Dockerfile spring-boot-0.0.1-SNAPSHOT.jar
+----
+
+. Build the container image
++
+[source]
+----
+$ docker build . --tag myapp
+Sending build context to Docker daemon 19.29 MB
+Step 1/4 : FROM openjdk:11
+ ---> a548e8a50190
+Step 2/4 : COPY spring-boot-0.0.1-SNAPSHOT.jar /spring-boot-0.0.1-SNAPSHOT.jar
+ ---> 512817bf40b1
+Removing intermediate container ca9e8a40576b
+Step 3/4 : CMD java -jar /spring-boot-0.0.1-SNAPSHOT.jar
+ ---> Running in 8c978eb3bfc3
+ ---> 4dd65bb22f39
+Removing intermediate container 8c978eb3bfc3
+Step 4/4 : LABEL "myapp" ''
+ ---> Running in ed2ed797b412
+ ---> e2a1859a0bb8
+Removing intermediate container ed2ed797b412
+Successfully built e2a1859a0bb8
+----
+
+. Tag the image to a registry you have access to pull from
++
+[source]
+----
+$ docker images | grep myapp
+myapp                                                               latest              e2a1859a0bb8        About a minute ago   646 MB
+$ docker tag myapp quay.io/bward/myapp:latest
+$ docker images | grep myapp
+myapp                                                               latest              e2a1859a0bb8        3 minutes ago       646 MB
+quay.io/bward/myapp                                                 latest              e2a1859a0bb8        3 minutes ago       646 MB
+----
+
+. Push the image to the remote repository from which your image will pull.
++
+[source]
+----
+$ docker login quay.io
+Username: bward
+Password:
+Login Succeeded
+
+$ docker push quay.io/bward/myapp
+The push refers to a repository [quay.io/bward/myapp]
+86fdd08f4977: Pushed
+3fb986725e60: Pushed
+a6170c7cf572: Pushed
+33783834b288: Pushed
+5c813a85f7f0: Pushed
+bdca38f94ff0: Pushed
+faac394a1ad3: Pushed
+ce8168f12337: Pushed
+latest: digest: sha256:268ee7f59472b1a34d374cbdaa3176f73986f404a3771d0a5a5cc84ac4a5e789 size: 2006
+----
+
+. Create a Kubernetes dev environment.footnote:[https://kubernetes.io/docs/tasks/tools/install-minikube/]
++
+[source]
+----
+$ curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 \
+>   && chmod +x minikube
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100 46.7M  100 46.7M    0     0  7054k      0  0:00:06  0:00:06 --:--:-- 6249k
+
+$ install minikube ~/bin/
+
+$ minikube start --vm-driver=kvm2
+😄  minikube v1.7.2 on Fedora 30
+✨  Using the kvm2 driver based on user configuration
+💾  Downloading driver docker-machine-driver-kvm2:
+    > docker-machine-driver-kvm2.sha256: 65 B / 65 B [-------] 100.00% ? p/s 0s
+    > docker-machine-driver-kvm2: 13.82 MiB / 13.82 MiB  100.00% 8.36 MiB p/s 2
+💿  Downloading VM boot image ...
+    > minikube-v1.7.0.iso.sha256: 65 B / 65 B [--------------] 100.00% ? p/s 0s
+    > minikube-v1.7.0.iso: 166.68 MiB / 166.68 MiB [-] 100.00% 9.22 MiB p/s 19s
+🔥  Creating kvm2 VM (CPUs=2, Memory=2000MB, Disk=20000MB) ...
+🐳  Preparing Kubernetes v1.17.2 on Docker 19.03.5 ...
+💾  Downloading kubelet v1.17.2
+💾  Downloading kubeadm v1.17.2
+💾  Downloading kubectl v1.17.2
+🚀  Launching Kubernetes ... 
+🌟  Enabling addons: default-storageclass, storage-provisioner
+⌛  Waiting for cluster to come online ...
+🏄  Done! kubectl is now configured to use "minikube"
+
+$ minikube status
+host: Running
+kubelet: Running
+apiserver: Running
+kubeconfig: Configured
+
+$ kubectl version
+Client Version: version.Info{Major:"1", Minor:"17", GitVersion:"v1.17.2", GitCommit:"59603c6e503c87169aea6106f57b9f242f64df89", GitTreeState:"clean", BuildDate:"2020-01-18T23:30:10Z", GoVersion:"go1.13.5", Compiler:"gc", Platform:"linux/amd64"}
+Server Version: version.Info{Major:"1", Minor:"17", GitVersion:"v1.17.2", GitCommit:"59603c6e503c87169aea6106f57b9f242f64df89", GitTreeState:"clean", BuildDate:"2020-01-18T23:22:30Z", GoVersion:"go1.13.5", Compiler:"gc", Platform:"linux/amd64"}
+
+$ kubectl get namespaces
+NAME              STATUS   AGE
+default           Active   3m26s
+kube-node-lease   Active   3m28s
+kube-public       Active   3m28s
+kube-system       Active   3m28s
+
+$ kubectl create namespace java-fun-k8s
+namespace/java-fun created
+
+$ kubectl get ns
+NAME              STATUS   AGE
+default           Active   3m49s
+java-fun-k8s      Active   8s
+kube-node-lease   Active   3m51s
+kube-public       Active   3m51s
+kube-system       Active   3m51s
+
+$ kubectl config set-context --current --namespace=java-fun-k8s
+----
+
+. Create a pod from a pod spec.
++
+[source]
+----
+$ echo 'apiVersion: v1
+kind: Pod
+metadata:
+  generateName: myapp-
+  labels:
+    app: myapp
+  namespace: java-fun-k8s
+spec:
+  containers:
+  - image: quay.io/bward/myapp
+    imagePullPolicy: Always
+    name: myapp' | kubectl create -f -
+----
++
+In execution:
++
+[source]
+----
+$  echo 'apiVersion: v1
+> kind: Pod
+> metadata:
+>   generateName: myapp-
+>   labels:
+>     app: myapp
+>   namespace: java-fun-k8s
+> spec:
+>   containers:
+>   - image: quay.io/bward/myapp
+>     imagePullPolicy: Always
+>     name: myapp' | kubectl create -f -
+pod/myapp-wc7b9 created
+
+$ kubectl get pods
+NAME          READY   STATUS    RESTARTS   AGE
+myapp-wc7b9   1/1     Running   0          63s
+
+$ kubectl logs myapp-wc7b9 | tail -3
+webServerFactoryCustomizerBeanPostProcessor
+websocketServletWebServerCustomizer
+welcomePageHandlerMapping
+----
+
+. Create a set of pods from a deployment spec.
++
+[source]
+----
+$ echo 'apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: myapp
+  name: myapp
+  namespace: java-fun-k8s
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
+      deployment: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+        deployment: myapp
+    spec:
+      containers:
+      - image: quay.io/bward/myapp
+        imagePullPolicy: Always
+        name: myapp' | kubectl create -f -
+----
++
+In Execution:
++
+[source]
+----
+$ echo 'apiVersion: apps/v1
+> kind: Deployment
+> metadata:
+>   labels:
+>     app: myapp
+>   name: myapp
+>   namespace: java-fun-k8s
+> spec:
+>   replicas: 3
+>   selector:
+>     matchLabels:
+>       app: myapp
+>       deployment: myapp
+>   template:
+>     metadata:
+>       labels:
+>         app: myapp
+>         deployment: myapp
+>     spec:
+>       containers:
+>       - image: quay.io/bward/myapp
+>         imagePullPolicy: Always
+>         name: myapp' | kubectl create -f -
+deployment.apps/myapp created
+
+$ kubectl get pods
+NAME                   READY   STATUS    RESTARTS   AGE
+myapp-5b9dbdbb-fpqtl   1/1     Running   0          40s
+myapp-5b9dbdbb-gcvlg   1/1     Running   0          40s
+myapp-5b9dbdbb-zgtcj   1/1     Running   0          40s
+myapp-wc7b9            1/1     Running   0          63m
+
+$ kubectl get all
+NAME                       READY   STATUS    RESTARTS   AGE
+pod/myapp-5b9dbdbb-fpqtl   1/1     Running   0          46s
+pod/myapp-5b9dbdbb-gcvlg   1/1     Running   0          46s
+pod/myapp-5b9dbdbb-zgtcj   1/1     Running   0          46s
+pod/myapp-wc7b9            1/1     Running   0          63m
+
+NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/myapp   3/3     3            3           46s
+
+NAME                             DESIRED   CURRENT   READY   AGE
+replicaset.apps/myapp-5b9dbdbb   3         3         3       46s
+
+$ kubectl get replicaset.apps/myapp-5b9dbdbb -o yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  annotations:
+    deployment.kubernetes.io/desired-replicas: "3"
+    deployment.kubernetes.io/max-replicas: "4"
+    deployment.kubernetes.io/revision: "1"
+  creationTimestamp: "2020-02-12T19:14:18Z"
+  generation: 1
+  labels:
+    app: myapp
+    deployment: myapp
+    pod-template-hash: 5b9dbdbb
+  name: myapp-5b9dbdbb
+  namespace: java-fun-k8s
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Deployment
+    name: myapp
+    uid: 072d3369-17d5-4006-a186-2758263ca17d
+  resourceVersion: "10392"
+  selfLink: /apis/apps/v1/namespaces/java-fun-k8s/replicasets/myapp-5b9dbdbb
+  uid: 28978f77-201a-4ee6-bb81-580e23ba2ca0
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
+      deployment: myapp
+      pod-template-hash: 5b9dbdbb
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: myapp
+        deployment: myapp
+        pod-template-hash: 5b9dbdbb
+    spec:
+      containers:
+      - image: quay.io/bward/myapp
+        imagePullPolicy: Always
+        name: myapp
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status:
+  availableReplicas: 3
+  fullyLabeledReplicas: 3
+  observedGeneration: 1
+  readyReplicas: 3
+  replicas: 3
+----
+
+. Create a Service to load balance the pods
++
+[source]
+----
+$ kubectl create service clusterip myapp --tcp=8080:8080
+service/myapp created
+
+$ kubectl get all
+NAME                       READY   STATUS    RESTARTS   AGE
+pod/myapp-5b9dbdbb-fpqtl   1/1     Running   0          79m
+pod/myapp-5b9dbdbb-gcvlg   1/1     Running   0          79m
+pod/myapp-5b9dbdbb-zgtcj   1/1     Running   0          79m
+pod/myapp-wc7b9            1/1     Running   0          142m
+
+NAME            TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+service/myapp   ClusterIP   10.104.138.14   <none>        8080/TCP   5s
+
+NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/myapp   3/3     3            3           79m
+
+NAME                             DESIRED   CURRENT   READY   AGE
+replicaset.apps/myapp-5b9dbdbb   3         3         3       79m
+----
++
+Notice how the service IP 10.104.138.14 maps to endpoints created for each pod.
++
+[source]
+----
+$ kubectl describe endpoints
+Name:         myapp
+Namespace:    java-fun-k8s
+Labels:       app=myapp
+Annotations:  endpoints.kubernetes.io/last-change-trigger-time: 2020-02-12T20:33:58Z
+Subsets:
+  Addresses:          172.17.0.4,172.17.0.5,172.17.0.6,172.17.0.7
+  NotReadyAddresses:  <none>
+  Ports:
+    Name       Port  Protocol
+    ----       ----  --------
+    8080-8080  8080  TCP
+
+Events:  <none>
+----
++
+Now tunnel into the cluster to check the load balancer URL for your app.
++
+[source]
+----
+$ curl https://10.104.138.14:8080
+<NO RESPONSE, SINCE YOUR ARE NOT INSIDE THE KUBERNETES NETWORK>
+
+$ minikube ssh
+                         _             _            
+            _         _ ( )           ( )           
+  ___ ___  (_)  ___  (_)| |/')  _   _ | |_      __  
+/' _ ` _ `\| |/' _ `\| || , <  ( ) ( )| '_`\  /'__`\
+| ( ) ( ) || || ( ) || || |\`\ | (_) || |_) )(  ___/
+(_) (_) (_)(_)(_) (_)(_)(_) (_)`\___/'(_,__/'`\____)
+
+$ curl http://10.104.138.14:8080
+Greetings from Spring Boot!$ 
+----
+
+Note that we still do not have ingress setup to reach this service.  OpenShift handles this using Routes and an HAProxy ingress router.  This can be achieved several different ways using native Kubernetes ingress object, and is not covered here.
