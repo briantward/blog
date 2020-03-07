@@ -43,6 +43,8 @@ These notes are for OpenShift 3.x where you have control over changing the node 
 
 You can, however, use systemd-coredump to manage this, and configure the MaxUse or KeepFree parameters as explained in the documentationfootnote:[https://www.freedesktop.org/software/systemd/man/coredump.conf.html]:
 
+ https://www.freedesktop.org/software/systemd/man/coredump.conf.html
+
 - Change the core dump pattern to be processed by systemd
 
  echo '|/usr/lib/systemd/systemd-coredump %P %u %g %s %t %c %e' > /proc/sys/kernel/core_pattern
@@ -56,11 +58,13 @@ You could also write a custom filter script and specifying that in the core_patt
   # cat /proc/sys/kernel/core_pattern
   |/usr/libexec/my-custom-core-filter %P %u %g %s %t %c %e
 
-You could then filter the coredumps you want to keep based on patterns or app names.footnote:[http://man7.org/linux/man-pages/man5/core.5.html]
+You could then filter the coredumps you want to keep based on patterns or app names (http://man7.org/linux/man-pages/man5/core.5.html).
 
 Acquired from Robert Bost.
 
-Here is the https://bugzilla.redhat.com/show_bug.cgi?id=1379470[RFE for core dumps] at pod or container level.  Note that all RFEs are now in JIRA so this may be elsewhere now.
+Here is the RFE for core dumps at pod or container level.  Note that all RFEs are now in JIRA so this may be elsewhere now.
+
+  https://bugzilla.redhat.com/show_bug.cgi?id=1379470
 
 === Testing Core Dumps
 
@@ -71,36 +75,34 @@ Here is the https://bugzilla.redhat.com/show_bug.cgi?id=1379470[RFE for core dum
 
 - Schedule a test pod to your node
 
-- RSH to your pod, find the main application PID
+- RSH to your pod, find the main application PID, and kill your app
 
- $oc rsh POD_NAME` 
- -$ ps aux
+ `oc rsh POD_NAME` 
+ `$ ps aux`
+ `$ kill -11 <PID>` 
+
 
 - Kill your application to test the core dump was generated
 
- -$ kill -11 <PID>
-+
-or
-
- -$ kill -s SIGSEGV $$
+ kill -s SIGSEGV $$
 
 - On the node, check the location the core dump was written, or if using systemd, run the following:
 
- coredumpctl list
+ `coredumpctl list`
 
 === Testing Core Dumps on Apache HTTPD
 
-Apache Web Server handles SIGSEGV itself in a special way.  You must also configure how apache handles this, by setting `CoreDumpDirectory` and pointing that directive to a persistent storage location within the pod itself.  You could configure a HostPath to go to the same location as other core dumps, but this is an unnecessary security concern, and it is easier and safer to add and remove a PersistentVolume specifically for capturing the core dump.
+Apache Web Server handles SIGSEGV itself in a special way.  You must also configure how apache handles this, by setting CoreDumpDirectory and pointing that directive to a persistent storage location within the pod itself.  You could configure a HostPath to go to the same location as other core dumps, but this is an unnecessary security concern, and it is easier and safer to add and remove a PersistentVolume specifically for capturing the core dump.
 
 See the following repo for an example configuration in an s2i build. 
 
 https://github.com/briantward/cakephp-ex/blob/master/httpd-cfg/coredumps.conf
 
- $ cat httpd-cfg/coredumps.conf
-
 You can also achieve this by using a posthook execution
 
-https://en.wikipedia.org/wiki/Signal_(IPC)#List_of_signals[List of *NIX signals]
+List of *NIX signals
+
+- https://en.wikipedia.org/wiki/Signal_(IPC)#List_of_signals
 
 === Testing Core Dumps on Mysql
 
@@ -110,24 +112,40 @@ https://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_core
 
 === Testing Core Dumps on Java
 
- -XX:OnError flag
+-XX:OnError flag
+
+If you want to test the functionality above, you can make the change on one node. Schedule a test pod to it. `oc rsh` to that pod and execute `kill -11 <PID>` for the first PID in that Pod (run `ps aux` inside Pod and use first Pid).
 
 
-- https://access.redhat.com/solutions/4896[How to enable core file dumps when an application crashes or segmentation faults]
+I also confirmed with other teams the best approach for capturing Core Dumps is by setting CoreDumpDirectory and pointing that directive to a persistent storage location, as given in one of the examples I shared in the other ticket, 02101747.
 
-- https://access.redhat.com/solutions/649193[How to enable coredumps for daemon process (services) in RHEL?]
 
-- https://access.redhat.com/solutions/56021[How to collect core dump file of a crashing program that is shipped in Red Hat Enterprise Linux 6/7?]
+Inside your root application folder being used in the s2i build process:
 
-- https://access.redhat.com/solutions/2587[How to set sysctl variables on Red Hat Enterprise Linux]
+$ cat httpd-cfg/coredumps.conf
+Core
 
-- https://bugzilla.redhat.com/show_bug.cgi?id=1596284[Bug 1596284 - [RFE][GSS] Stop creating core dumps inside gluster pod root directory]
+How to enable core file dumps when an application crashes or segmentation faults 
+https://access.redhat.com/solutions/4896
 
-- https://github.com/moby/moby/issues/11740[Documentation: Make clear instructions for getting a core file, when container crashes #11740]
+How to enable coredumps for daemon process (services) in RHEL? 
+https://access.redhat.com/solutions/649193
 
+How to collect core dump file of a crashing program that is shipped in Red Hat Enterprise Linux 6/7? 
+https://access.redhat.com/solutions/56021
+
+How to set sysctl variables on Red Hat Enterprise Linux 
+https://access.redhat.com/solutions/2587
+
+Bug 1596284 - [RFE][GSS] Stop creating core dumps inside gluster pod root directory 
+https://bugzilla.redhat.com/show_bug.cgi?id=1596284
+
+Documentation: Make clear instructions for getting a core file, when container crashes #11740
+https://github.com/moby/moby/issues/11740
 Add "default-ulimits": {"core": {"Name": "core", "Hard": -1, "Soft": -1}} to /etc/docker/daemon.json
 
-- https://access.redhat.com/documentation/en-us/red_hat_software_collections/3/html-single/using_red_hat_software_collections_container_images/[Using Red Hat Software Collections Container Images]
+Using Red Hat Software Collections Container Images
+https://access.redhat.com/documentation/en-us/red_hat_software_collections/3/html-single/using_red_hat_software_collections_container_images/
 
 How to Extend the rhscl/mariadb-101-rhel7 Container Image 
 https://access.redhat.com/articles/2379991
