@@ -12,29 +12,29 @@ slug: jws-secured
 
 THIS CONFIGURATION HAS NOT BEEN TESTED!  THIS IS INTENDED AS A STARTING GUIDE ONLY.
 
-## RPM Base Installation
+=== RPM Base Installation
 
-1. Register your machine if you have not done so.
+. Register your machine if you have not done so.
 
     # subscription-manager register
 
-2. List the available subscriptions you have.  Look for the Pool ID of your JBoss Web Server subscription
+. List the available subscriptions you have.  Look for the Pool ID of your JBoss Web Server subscription
 
     # subscription-manager list --available
 
-3. Attach the correct subscription.
+. Attach the correct subscription.
 
     # subscription-manager attach --pool=$POOL_ID
 
-4. Verify it has been attached 
+. Verify it has been attached 
 
     # subscription-manager list --consumed
 
-5. Enable the repo
+. Enable the repo
 
     # subscription-manager repos --enable=jws-3-for-$RHEL_VERSION-server-rpms
 
-6. Install
+. Install
 
     # yum groupinstall jws3
     
@@ -42,33 +42,32 @@ or
 
     # yum groupinstall jws3plus
 
-## Zip Base Installation
+=== Zip Base Installation
 
 
-1. Download zip file from access.redhat.com for your OS.
-2. Unzip to secured location of your choice, such as /opt
-3. Run post-install script.  This should configure your apache server config files with full
+. Download zip file from access.redhat.com for your OS.
+. Unzip to secured location of your choice, such as /opt
+. Run post-install script.  This should configure your apache server config files with full
 path filenames based on your choice of installation directory.  It should also configure the
 apache user with /sbin/nologin shell.
 
     $ sudo ./$APACHE_HOME/.postinstall
-
-If the script did not correctly install the user, you've probably done something incredibly wrong.  
-If you want to do this part yourself and you don't want absolute URLS in your configs:
-
++
+If the script did not correctly install the user, you've probably done something incredibly wrong. +
+If you want to do this part yourself and you don't want absolute URLS in your configs: +
     
     $ sudo groupadd -g 48 -r apache
     $ sudo useradd -c "Apache" -u 48 -g apache -s /sbin/nologin -r apache
     $ sudo chown -R apache:apache httpd
     $ sudo passwd -l apache
 
-4. Lock out the apache user.
+. Lock out the apache user.
 
     $ sudo passwd -l apache
 
-## Test the server base installation.
+=== Test the server base installation.
 
-1. Create a test file index.html in $WWW_ROOT:
+. Create a test file index.html in $WWW_ROOT:
 
     <html>
     <body>
@@ -76,27 +75,27 @@ If you want to do this part yourself and you don't want absolute URLS in your co
     </body>
     </html>
 
-2. Start the server.  It defaults on port 80, so you must use the root account to start it.
+. Start the server.  It defaults on port 80, so you must use the root account to start it.
 
     $ sudo ./sbin/apachectl start
 
-3. Test it.  Be sure this returns the above index.html data.
+. Test it.  Be sure this returns the above index.html data.
 
     $ curl http://localhost:80
 
-4. Stop the server.
+. Stop the server.
 
     $ sudo ./sbin/apachectl stop
 
-## Start securing it.
+=== Start securing it.
 
-1. Backup config files for reference.  Remove them for production use. 
+. Backup config files for reference.  Remove them for production use. 
 
     $ cp -Ra config config.backup
     $ cp -Ra config.d config.d.backup 
     $ cp -Ra confg.modules.d config.modules.d.backup
 
-2. Change the following existing directives in httpd.conf:
+. Change the following existing directives in httpd.conf:
 
     # CIS 8.1 Set ServerToken to 'Prod'
     ServerTokens Prod
@@ -123,7 +122,7 @@ If you want to do this part yourself and you don't want absolute URLS in your co
     # CIS 8.2 Set ServerSignature to 'Off'
     ServerSignature Off
 
-3. Add the following directives:
+. Add the following directives:
 
     Near the beginning of the file, where other server-level configs are placed:
 
@@ -178,7 +177,7 @@ If you want to do this part yourself and you don't want absolute URLS in your co
         Require all granted
     </FilesMatch>
 
-4. These directives stay the same.  You may want to comment that they are CIS specs and should not be changed.
+. These directives stay the same.  You may want to comment that they are CIS specs and should not be changed.
 
     # CIS 9.3
     MaxKeepAliveRequests 100
@@ -195,7 +194,7 @@ If you want to do this part yourself and you don't want absolute URLS in your co
       RequestReadTimeout header=20-40,MinRate=500 body=20,MinRate=500
     </IfModule>
     
-5. Comment out the following sections:
+. Comment out the following sections: +
 
     - The settings for providing icon images, which won't be needed because auto-indexing will be turned off.
     - The WebDAV settings, which won't be activated anyways because we will turn off the module.
@@ -205,7 +204,7 @@ If you want to do this part yourself and you don't want absolute URLS in your co
     - The Alias for error and the settings for the error page by language, because this feature requires Server Side Includes which will be disabled.
     - IncludeOptional directive, which disables all subconfigs. Reenable if any are needed and be sure to comment out ones you don't want.
 
-6. Comment out all the files in conf.d.  Even though we have commented out the IncludeOptional line in httpd.conf, we may want to add some features back, sometime in the future.  Doing this proactively means nothing else gets turned on by accident.
+. Comment out all the files in conf.d.  Even though we have commented out the IncludeOptional line in httpd.conf, we may want to add some features back, sometime in the future.  Doing this proactively means nothing else gets turned on by accident. +
 
     - manual.conf
     - mod_cluster.conf
@@ -213,10 +212,10 @@ If you want to do this part yourself and you don't want absolute URLS in your co
     - ssl.conf
     - userdir.conf
     - welcome.conf
++
+Note that SSL is disabled here.  Configuring SSL is not in the scope of this document, at this time.  The assumption here is that SSL has been offloaded by a load balancer and this httpd host is in a secured subnet.  Also be aware that this burnt some companies in the past who had private data lines between subnets and thought their traffic was secured.  
 
-    Note that SSL is disabled here.  Configuring SSL is not in the scope of this document, at this time.  The assumption here is that SSL has been offloaded by a load balancer and this httpd host is in a secured subnet.  Also be aware that this burnt some companies in the past who had private data lines between subnets and thought their traffic was secured.  
-
-7. In conf.modules.d folder, comment out all lines of the below files.  Do not delete or rename the files, as during an RPM upgrade they would simply be replaced.
+. In conf.modules.d folder, comment out all lines of the below files.  Do not delete or rename the files, as during an RPM upgrade they would simply be replaced. +
 
     - 00-dav.conf
     - 00-proxy.conf
@@ -227,7 +226,7 @@ If you want to do this part yourself and you don't want absolute URLS in your co
     - 01-session.conf 
     - 10-auth_kerb.conf
 
-8.  That should leave two more files in conf.modules.d:
+.  That should leave two more files in conf.modules.d: +
 
     - 00-base.conf, comment out...
         
@@ -282,7 +281,7 @@ If you want to do this part yourself and you don't want absolute URLS in your co
     - 00-mpm.conf
          Leave this one as-is, or comment out the MPM module you are not using.  
 
-## Notes
+=== Notes
 
 - This installation uses port 8080. You may change this to any non-root based port and you will never need to specify root level access on any folders, nor will you need to run apache as root.  The CIS specifications recommend root ownership of certain files, but this is not needed when apache is not run on port 80.  Using an external facing load balancer as a reverse proxy, placed in front of your apache node(s), you will not need to install apache or run apache as root.  This is safer, as the apache admin role can be separate from the system admin role.  In addition, the reverse proxy can offload SSL, speeding up the apache performance.  
 - This installation removes a lot of basic features, such as language-based error pages, cgi-bin, and auto-indexing.  Some of these features do not need to be turned off to meet CIS specifications, but they are done here to simplify the server as much as possible.  Add back in what you may need and be sure to review any CIS specifications for the file permissions where needed (e.g. cgi-bin location and files).  We assume that most companies would want to customize these pages anyways, and do it in some proprietary way, probably without the use of Server Side Includes.  If you want that behavior just turn it back on and note that SSI is old technology.
