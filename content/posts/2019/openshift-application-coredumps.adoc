@@ -100,18 +100,19 @@ https://github.com/briantward/cakephp-ex/blob/master/httpd-cfg/coredumps.conf
 
 You can also achieve this by using a posthook execution
 
-https://en.wikipedia.org/wiki/Signal_(IPC)#List_of_signals[List of *NIX signals]
-
 === Testing Core Dumps on Mysql
 
-https://dev.mysql.com/doc/refman/5.7/en/using-system-variables.html
+- https://dev.mysql.com/doc/refman/5.7/en/using-system-variables.html
 
-https://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_core_file
+- https://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_core_file
 
 === Testing Core Dumps on Java
 
- -XX:OnError flag
+Add flag to java startup.
 
+ -XX:OnError
+
+=== Additional Documentation
 
 - https://access.redhat.com/solutions/4896[How to enable core file dumps when an application crashes or segmentation faults]
 
@@ -129,36 +130,40 @@ Add "default-ulimits": {"core": {"Name": "core", "Hard": -1, "Soft": -1}} to /et
 
 - https://access.redhat.com/documentation/en-us/red_hat_software_collections/3/html-single/using_red_hat_software_collections_container_images/[Using Red Hat Software Collections Container Images]
 
-How to Extend the rhscl/mariadb-101-rhel7 Container Image 
-https://access.redhat.com/articles/2379991
+- https://access.redhat.com/articles/2379991[How to Extend the rhscl/mariadb-101-rhel7 Container Image]
 
-https://github.com/sclorg/mysql-container/blob/master/5.7/Dockerfile.rhel7
+- https://github.com/sclorg/mysql-container/blob/master/5.7/Dockerfile.rhel7
 
-http://man7.org/linux/man-pages/man5/core.5.html
-https://linux.die.net/man/5/limits.conf
-https://www.freedesktop.org/software/systemd/man/systemd-coredump.html
-https://www.freedesktop.org/software/systemd/man/coredump.conf.html
-https://www.freedesktop.org/software/systemd/man/coredumpctl.html
-https://en.wikipedia.org/wiki/Signal_(IPC)#List_of_signals
+- http://man7.org/linux/man-pages/man5/core.5.html
 
-Apache httpd core file analysis on Red Hat Enterprise Linux 
-https://access.redhat.com/articles/1469
+- https://linux.die.net/man/5/limits.conf
 
-Apache httpd crash on Red Hat Enterprise Linux 
-https://access.redhat.com/solutions/1465
+- https://www.freedesktop.org/software/systemd/man/systemd-coredump.html
 
-https://github.com/sclorg/s2i-php-container
+- https://www.freedesktop.org/software/systemd/man/coredump.conf.html
 
-https://dev.mysql.com/doc/refman/5.7/en/using-system-variables.html
-https://www.percona.com/blog/2011/08/26/getting-mysql-core-file-on-linux/
-http://fromdual.com/hunting-the-core
+- https://www.freedesktop.org/software/systemd/man/coredumpctl.html
 
-How to use oc debug (Solution in edit)
-https://access.redhat.com/solutions/3194462
+- https://access.redhat.com/articles/1469[Apache httpd core file analysis on Red Hat Enterprise Linux]
 
-https://access.redhat.com/documentation/en-us/red_hat_developer_toolset/7/html-single/user_guide/
-https://access.redhat.com/documentation/en-us/red_hat_software_collections/3/html/using_red_hat_software_collections_container_images/devtoolset-images
-https://github.com/sclorg/devtoolset-container/tree/master/7-toolchain
+- https://access.redhat.com/solutions/1465[Apache httpd crash on Red Hat Enterprise Linux]
 
-https://access.redhat.com/solutions/2168181
+- https://github.com/sclorg/s2i-php-container
 
+- https://dev.mysql.com/doc/refman/5.7/en/using-system-variables.html
+
+- https://www.percona.com/blog/2011/08/26/getting-mysql-core-file-on-linux/
+
+- http://fromdual.com/hunting-the-core
+
+- https://access.redhat.com/solutions/3194462[How to use oc debug (Solution in edit)]
+
+- https://access.redhat.com/documentation/en-us/red_hat_developer_toolset/7/html-single/user_guide/
+
+- https://access.redhat.com/documentation/en-us/red_hat_software_collections/3/html/using_red_hat_software_collections_container_images/devtoolset-images
+
+- https://github.com/sclorg/devtoolset-container/tree/master/7-toolchain
+
+- https://access.redhat.com/solutions/2168181
+
+- https://en.wikipedia.org/wiki/Signal_(IPC)#List_of_signals[List of *NIX signals]

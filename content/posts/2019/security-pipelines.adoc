@@ -11,6 +11,7 @@ slug: security-pipelines
 
 These are random notes for work in progress coded at https://github.com/briantward/container-pipelines/tree/parallel-spring-boot
 
+----
 - two OCP clusters: nonprod (dev, test, etc) and prod (prod, stage)
 - allow nonprod cluster to continue pulling image updates automatically to registry
 - have separate registries between nonprod and prod
@@ -81,7 +82,7 @@ app-prod
 - dc app-secup (v1.0.1) 
 - route http://app.example.com
 - switch using Blue/Green or A/B deployment strategy, controlled manually or by Pipelines
- 
+----
 
 
 [source]

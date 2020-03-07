@@ -17,5 +17,5 @@ slug: git
 - Set author display on git rebase
 
   $ git config --add rebase.instructionFormat "(%an <%ae>) %s"
-
++
 https://stackoverflow.com/questions/35851671/is-there-a-way-to-list-the-commits-author-in-git-rebase-i-interactive
