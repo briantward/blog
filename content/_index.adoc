@@ -6,19 +6,8 @@ slug: /
 
 == Everyday Linux
 
-This site is a collection of my everyday linux tasks.  I consider myself 
-primarily a developer and programmer, but I run into system configuration
-and administration tasks on a daily basis.  I've started this collection
-to remind myself of good programming practices as well as basic system
-configurations that I need to get things done.  
+This site is a collection of my everyday linux tasks and notes of my work.  Content is always a work in progress and not formally published.  As such, any page is subject to change, being simply updated, edited, or re-dated for newer material.  Some pages are clearly unfinished.  Nothing is guaranteed to be accurate or true and you should not depend on any content for Production use.  
 
-While this is currently running on a golang blog engine, hugo, I'd like to take it a step further so that you can click through all the revisions to see how each article may have changed through time.  I don't expect any one of these posts to be completely static.  As I learn new things, or discover mistakes, I'll be updating the posts to reflect that new knowledge.  Maybe I'll want to adjust things stylistically too.  Right now stuff is organized by date because that's generally how blogs, and thus Hugo, typically work.  But really what is important is the topic, not the date.  
-
-Three objectives for hugo and golang I have will be:
-
-. Add a feature to dynamically pull article changes through the git repo, akin to features in place for code history on sites such as github.com.
-. Add (or figure out how if already implemented) a feature for multiple users, to allow collaboration and growth.
-. Contribute back to asciidoc in golang, with a native implementation.  Right now this app is built using a ruby asciidoc parsing engine.  
-
+Frequently I may borrow or link to other published material.  If you believe your own content is misrepresented here, please feel free to reach out to me and I will adjust content as necessary.  
 
 Brian Ward
