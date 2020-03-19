@@ -20,3 +20,15 @@ This one is useful when you don't have a user directory on the system yet.
  /sbin/mkhomedir_helper <username> [<umask> [<skeldir>]]
 
 https://serverfault.com/questions/63764/create-home-directories-after-create-users
+
+Because docker rmi on all image IDs doesn't work when one image ID maps to multiple repo:tag combinations.
+
+ $ docker images | grep -v REPO | awk '{print $1":"$2}' | xargs docker rmi
+
+Otherise this works fine:
+ 
+ $ docker images -q | xargs docker rmi
+
+Or 
+
+ $ docker rmi $(docker images -a -q)
