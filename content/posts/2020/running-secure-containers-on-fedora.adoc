@@ -1,0 +1,467 @@
+---
+title: Running Secure Containers on Fedora 31 and RHEL 8
+date: 2020-03-17
+categories: ["container","fedora","rhel"]
+tags: ["8","rhel8","fedora31","podman","security","selinux"]
+language: en
+slug: running-secure-containers-on-fedora
+---
+
+== Running Secure Containers on Fedora 31 and RHEL 8
+
+The first thing to note here, is that "secured" means running the container with SELinux enforcing. If you don't care about SELinux or have other alternatives in place, move along here, as you won't find this useful. I will not be discussing application security or platform security.
+
+The second thing to note here, is that setting this up requires more work, per container, than running your container on OpenShift, which is Red Hat's Container platform built on Kubernetes.  The reason for this lies with the fact that containers run secured by default in OpenShift, and require each container to wholy own its persistent storage, in what is called a PersistentVolume.  Each PV is mounted into the container with appropriate SELinux policies applied.
+
+=== Example Application: Emby Media Server
+
+I wanted to run a headless Emby Media server on my network, for sharing on my local network all the DVDs and music that I have purchased over the years.
+
+The upstream Docker container can be found here:
+
+https://hub.docker.com/r/emby/embyserver/
+
+But we need to be able to run this using Podman so there are a few different considerations here.  My default install on Fedora Server included both `podman` and `slirp4netns`.  
+
+ $ docker pull emby/embyserver
+
+Becomes
+
+ $ podman pull emby/embyserver
+
+But we have an immediate error on even trying to pull this image, because we are not root, and we have not yet set our system to handle user namespaces for containers.footnote:[https://www.redhat.com/sysadmin/rootless-podman[Why can’t rootless Podman pull my image?]]
+
+<insert error output here from reproducer>
+
+[source]
+----
+ERRO[0005] Error pulling image ref //testimg:latest: Error committing the finished image: error adding layer with blob "sha256:caed8f108bf6721dc2709407ecad964c83a31c8008a6a21826aa4ab995df5502": Error processing tar file(exit status 1): there might not be enough IDs available in the namespace (requested 4000000:4000000 for /testfile): lchown /testfile: invalid argument
+----
+
+https://www.redhat.com/sysadmin/rootless-podman[Why can’t rootless Podman pull my image?]
+
+Essentially we need to check or set some sysctl values for enabling user namespaces.  
+
+You can check
+
+[source]
+----
+$ sysctl user.max_user_namespaces
+user.max_user_namespaces = 15000
+----
+
+As you can see, it appears to be enabled by default on my Fedora 31 Server (fresh install).  Depending on how you built your server or upraded it, you may need to set this manually.
+
+You can do this for your current session:
+
+ $ sudo sysctl user.max_user_namespaces=15000
+
+Or, as Red Hat Documentation suggestsfootnote:[https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html-single/building_running_and_managing_containers/index#set_up_for_rootless_containers], you can also make this permanent:
+
+[source]
+----
+# echo "user.max_user_namespaces=15000" > /etc/sysctl.d/userns.conf
+# sysctl -p /etc/sysctl.d/userns.conf
+----
+
+There is this particular comment in the referenced blog that is important to understand [1]:
+
+[quote]
+____
+Note: The /etc/subuid and /etc/subgid files are for adjusting users that already exist. Defaults for new users are adjusted elsewhere.
+____
+
+Since my user was created by IdM (free-ipa), I needed to add these values manually to `/etc/subuid` and `/etc/subgid`.  You may not need to do this by default.
+
+
+ $ sudo echo "bward:100000:65536" >> /etc/subuid
+ $ sudo echo "bward:100000:65536" >> /etc/subuid
+
+Now I can pull the image correctly.
+
+Luckily this container was not built with any hard requirement for root access, so we can get going with trying to run this container easily as a nonroot user.  In fact, the author of the container let's you set it up so that you can pick any user, so this could be your own account or a custom system account you might make.  I chose to just run it under my user account to get things rolling, but it would make sense to have a system account in production for best process isolation.
+
+The Emby documentation tells us to start with the following:
+
+[source]
+----
+docker run -d \
+    --volume /path/to/programdata:/config \ # This is mandatory
+    --volume /path/to/share1:/mnt/share1 \ # To mount a first share
+    --volume /path/to/share2:/mnt/share2 \ # To mount a second share
+    --device /dev/dri:/dev/dri \ # To mount all render nodes for VAAPI/NVDEC/NVENC
+    --runtime=nvidia \ # To expose your NVIDIA GPU
+    --publish 8096:8096 \ # To expose the HTTP port
+    --publish 8920:8920 \ # To expose the HTTPS port
+    --env UID=1000 \ # The UID to run emby as (default: 2)
+    --env GID=100 \ # The GID to run emby as (default 2)
+    --env GIDLIST=100 \ # A comma-separated list of additional GIDs to run emby as (default: 2)
+    emby/embyserver:latest
+----
+
+
+So I used the above with my own volume mappings and removing the nvidia stuff (my server is headless and as far as I can tell it doesn't need the GPU but maybe that is something I need to revisit later).  But I immediate got some errors as the container crashed seconds into launching it.  Startup logs show that it cannot chown the files it needs.  Well, this is certainly a permissions nightmare as figuring out who should have access to this container is confusing with all this UID/GID mapping stuff.
+
+[source]
+----
+podman run -d \
+--network=host \ 
+--volume /home/bward/emby/config:/config \
+--volume /media:/media \
+--publish 8096:8096 \
+--publish 8920:8920 \
+--env UID=1000 \
+--env GID=100 \
+--env GIDLIST=100 \
+emby/embyserver:latest
+----
+
+As you can see, my config folder is in my home directory and my media content is mounted by root at system boot at `/media`.  I made this media location read/writable by everyone for simplicity here.  So the first thing was getting the folder mapping correct for the config folder since that was where the first error ocurred.  
+
+https://www.redhat.com/sysadmin/rootless-podman-makes-sense[Running rootless Podman as a non-root user]
+
+ $ podman unshare ls -lah /home/bward/emby/config
+
+That shows us that my UID/GID is not correct, so let's set it to the mappings we expect
+
+ $ podman unshare chown -R 1001:1001 /home/bward/emby/config
+
+Alternatively you can run
+
+ $ sudo chown -R 101000:101000 /home/bward/emby/config
+
+This is because our UID is run as 1001 in the container.  Oddly enough it does not become 101001, so the start is one off.  Even though our mapping file starts at 100000 and extends to 165536 ("bward:100000:65536").  This is because the first UID assigned to me is actually started at 0.
+
+[source]
+----
+$ podman unshare cat /proc/self/uid_map
+         0 1959800003          1
+         1     100000      65536
+----
+
+If we had started at 100001 instead of 100000 this would line up a little more cleanly.  Oh well, maybe next time.
+
+Ok so now that we have directory ownership correct, we try again but still run into startup errors.
+
+<show example>
+
+Well now that normal permissions are taken care of, we can think of selinux permissions, and sure enough it was Enforcing by default.  Setting it to Permissive for debugging gets it to start up cleanly.
+
+ # setenforce 0
+
+Now the question becomes, how do I identify what SELinux policy I need to apply to this container? Luckily we have a tool to get started, udica.footnote:[https://www.redhat.com/en/blog/generate-selinux-policies-containers-with-udica[Generate SELinux policies for containers with Udica]]footnote:[https://github.com/containers/udica[udica - Generate SELinux policies for containers!]]footnote:[https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html-single/using_selinux/index#creating-selinux-policies-for-containers_using-selinux[RHEL 8: Creating SELinux policies for containers]]
+
+Now that we have the pod running fine with SELinux in Permissive, let's generate the base SELinux module for this container.  It will be a block of SELinux policies particular to this container.  Notice that we do need root permissions to run `udica` and `semodule`.  This should be obvious as we are authorizing a set of activities on the host.
+
+[source]
+----
+$ sudo dnf install -y udica
+$ podman inspect <MYCONTAINERID> > emby.json
+$ sudo udica -j emby.json emby
+
+Policy emby created!
+
+Please load these modules using:
+# semodule -i emby.cil /usr/share/udica/templates/base_container.cil
+
+Restart the container with: "--security-opt label=type:emby.process" parameter
+
+$ sudo semodule -i emby.cil /usr/share/udica/templates/base_container.cil
+----
+
+So now that we have the policy loaded, let's turn SELlinux back on to Enforcing and run this container with the security-opt flag as described above.
+
+What??? No dice!? Ok so this is somewhat aggravating.  It turns out, `udica` cannot magically guess all container interactions from the inspect JSON!  That's actually not a huge surprise, but it is somewhat misleading without further documentation.  Unfortunately for me it took several hours and dozens of trial and error runs to get this right.  Knowing a bit more about the application would have helped, but I figured I could get this working before needing to go poking at the author for Emby.  
+
+The first thing I found complicating things was my network setup.  I had run with `--network=host` as a result of finding it a simple solution, and on my machine I did not plan to build out complex networking solutions.  Unfortunately `udica` reads the networking configuration from the Inspection JSON output, ignoring the startup command altogether.  While it could have read my startup command and determined the container needed access to these ports, it did not do so.  Since the host networking setup does not record those values in the configuration, `udica` skipped adding the appropriate SELinux policies.  I figured this out by checking out the base policies in that command, `/usr/share/udica/templates/base_container.cil`, and realizing they did not include any network details.
+
+I originally ran this on a RHEL 7 box with podman installed, but it did not have `slirp4netns`.
+
+[source]
+----
+$ podman run -d --volume /home/bward/emby/config:/config --volume /media/bosch/pub/movies/iso:/media --publish 8096:8096 --publish 8920:8920 --env UID=1000 --env GID=100 --env GIDLIST=100 emby/embyserver:latest
+ERRO[0002] could not find slirp4netns, the network namespace won't be configured: exec: "slirp4netns": executable file not found in $PATH 
+f60ae88bece8ac396a8b4b01434b1a3d77e3a5dbe30ec35d46fb5d43eff01638
+
+$ which slirp4netns
+/usr/bin/which: no slirp4netns in (/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/bward/.local/bin:/home/bward/bin)
+$ cat /etc/*release*
+NAME="Red Hat Enterprise Linux Server"
+VERSION="7.7 (Maipo)"
+...
+----
+
+Inspect shows that it is missing network settings, in spite of them clearly being in the start command
+
+[source]
+----
+$ podman inspect c87977333cae
+...
+        "NetworkSettings": {
+            "Bridge": "",
+            "SandboxID": "",
+            "HairpinMode": false,
+            "LinkLocalIPv6Address": "",
+            "LinkLocalIPv6PrefixLen": 0,
+            "Ports": [],
+            "SandboxKey": "",
+            "SecondaryIPAddresses": null,
+            "SecondaryIPv6Addresses": null,
+            "EndpointID": "",
+            "Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "IPAddress": "",
+            "IPPrefixLen": 0,
+            "IPv6Gateway": "",
+            "MacAddress": ""
+        },
+...
+----
+
+
+[source]
+----
+            "CreateCommand": [
+                "podman",
+                "run",
+                "-d",
+                "--volume",
+                "/home/bward/emby/config:/config",
+                "--volume",
+                "/home/bward/emby/media:/media",
+                "-p",
+                "8096:8096",
+                "-p",
+                "8096:8096/udp",
+                "-p",
+                "8920:8920",
+                "-p",
+                "8920:8290/udp",
+                "-p",
+                "1900:1900/udp",
+                "-e",
+                "UID=1001",
+                "-e",
+                "GID=1001",
+                "emby/embyserver:latest"
+            ]
+----
+
+I originally chose to run `--network=host` due to early complications of running podman containers on RHEL 7, I believe, where I did not already have `slirp4netns` installed.  Since this package is installed by default on Fedora 31 with `podman`, I found removing `--network=host` worked fine.  It had previously run on my other machine noting that networking was broken as a result of missing `slirp4netns`.footnote:[https://www.redhat.com/sysadmin/container-networking-podman[Configuring container networking with Podman]] Running with `--network=host` had just been a workaround at the time, so I removed it on rerun and found that the inspect command showed more networking details.  It became apparent that `udica` reads thatnetwork object in the inspect output to generate the appropriate network policies for SELinux.  
+
+The second thing that I found complicating things was the need for UDP socket access, specifically on all ports, even though I had already opened my TCP ports on my firewall and was not permitting any UDP traffic across the network.  I guess this was a particular quirk of the application. Apparently it is creating UDP listeners, but when operating on my network it doesn't seem to _need_ them as I've never opened the firewall ports.  Maybe that's a discussion for the Emby developers. 
+
+The third thing was also application related, as apparently it also listens on UDP port 1900 during startup, though subsequent `ss` listings did not show it continued to use this port.  I found port 1900 as a suggestion from earlier posts on problems with Emby when run on the docker bridge network rather than the host network.  
+
+The run command and the inspect JSON then looked something more like this:
+
+[source]
+----
+$ podman run -d \
+--security-opt label=type:emby.process \
+--volume /home/bward/emby/config:/config \
+--volume /home/bward/emby/media:/media \
+-p 8096:8096 \
+-p 8096:8096/udp \
+-p 8920:8920 \
+-p 8920:8290/udp \
+-p 1900:1900/udp \
+-e UID=1001 \
+-e GID=1001 \
+emby/embyserver:latest
+
+$ podman inspect c87977333cae
+...
+        "NetworkSettings": {
+            "Bridge": "",
+            "SandboxID": "",
+            "HairpinMode": false,
+            "LinkLocalIPv6Address": "",
+            "LinkLocalIPv6PrefixLen": 0,
+            "Ports": [
+                {
+                    "hostPort": 8920,
+                    "containerPort": 8920,
+                    "protocol": "tcp",
+                    "hostIP": ""
+                },
+                {
+                    "hostPort": 8920,
+                    "containerPort": 8290,
+                    "protocol": "udp",
+                    "hostIP": ""
+                },
+                {
+                    "hostPort": 1900,
+                    "containerPort": 1900,
+                    "protocol": "udp",
+                    "hostIP": ""
+                },
+                {
+                    "hostPort": 8096,
+                    "containerPort": 8096,
+                    "protocol": "tcp",
+                    "hostIP": ""
+                },
+                {
+                    "hostPort": 8096,
+                    "containerPort": 8096,
+                    "protocol": "udp",
+                    "hostIP": ""
+                }
+            ],
+...
+----
+
+
+Even still, I got the application to launch cleanly, but there were still AVC denials being logged, preventing the application from working correctly from remote machines (the web interface worked, but streaming movies did not). So on further detailed investigation of the SEModule generated by `udica` and comparing to the AVC denials in `/var/log/audit/audit.log`, I found the following:
+
+[source]
+----
+$ cat emby.cil 
+(block emby
+    (blockinherit container)
+    (blockinherit restricted_net_container)
+    (allow process process ( capability ( chown dac_override fsetid fowner mknod net_raw setgid setuid setfcap setpcap net_bind_service sys_chroot kill audit_write ))) 
+
+    (allow process unreserved_port_t ( tcp_socket (  name_bind ))) 
+    (allow process unreserved_port_t ( udp_socket (  name_bind ))) 
+    (allow process ssdp_port_t ( udp_socket (  name_bind ))) 
+    (allow process unreserved_port_t ( tcp_socket (  name_bind ))) 
+    (allow process unreserved_port_t ( udp_socket (  name_bind ))) 
+    (allow process user_home_t ( dir ( open read getattr lock search ioctl add_name remove_name write ))) 
+    (allow process user_home_t ( file ( getattr read write append ioctl lock map open create  ))) 
+    (allow process user_home_t ( sock_file ( getattr read write append open  ))) 
+    (allow process user_home_t ( dir ( open read getattr lock search ioctl add_name remove_name write ))) 
+    (allow process user_home_t ( file ( getattr read write append ioctl lock map open create  ))) 
+    (allow process user_home_t ( sock_file ( getattr read write append open  ))) 
+)
+----
+
+[source]
+----
+type=AVC msg=audit(1584409148.449:6830): avc:  denied  { rename } for  pid=30491 comm="ffmpeg" name="efb3d448b3d239bb5d35b5c3e50f5b95.m3u8.tmp" dev="dm-3" ino=211919424 scontext=system_u:system_r:emby.process:s0:c151,c900 tcontext=system_u:object_r:user_home_t:s0 tclass=file permissive=1
+...
+type=AVC msg=audit(1584409148.449:6831): avc:  denied  { unlink } for  pid=30491 comm="ffmpeg" name="efb3d448b3d239bb5d35b5c3e50f5b95.m3u8" dev="dm-3" ino=211919422 scontext=system_u:system_r:emby.process:s0:c151,c900 tcontext=system_u:object_r:user_home_t:s0 tclass=file permissive=1
+...
+type=AVC msg=audit(1584421297.913:6858): avc:  denied  { setattr } for  pid=26360 comm="EmbyServer" name="f7e583d30c3b499d84bbcaef2e27785f.png" dev="dm-3" ino=402760194 scontext=system_u:system_r:emby.process:s0:c151,c900 tcontext=system_u:object_r:user_home_t:s0 tclass=file permissive=1
+...
+type=AVC msg=audit(1584489609.398:7126): avc:  denied  { link } for  pid=26360 comm="EmbyServer" name="embyserver.txt" dev="dm-3" ino=268987196 scontext=system_u:system_r:emby.process:s0:c151,c900 tcontext=system_u:object_r:user_home_t:s0 tclass=file permissive=0
+...
+type=AVC msg=audit(1584490531.808:7141): avc:  denied  { rmdir } for  pid=26360 comm="EmbyServer" name="c9497bf0c838321b8aedfe6ec0bcea18" dev="dm-3" ino=212388327 scontext=system_u:system_r:emby.process:s0:c151,c900 tcontext=system_u:object_r:user_home_t:s0 tclass=dir permissive=0
+...
+type=AVC msg=audit(1584490610.269:7151): avc:  denied  { create } for  pid=26360 comm="EmbyServer" name="97630" scontext=system_u:system_r:emby.process:s0:c151,c900 tcontext=system_u:object_r:user_home_t:s0 tclass=dir permissive=0
+...
+type=AVC msg=audit(1584490610.832:7153): avc:  denied  { setattr } for  pid=26360 comm="EmbyServer" name="dc89056c78e844de986c007f5394db8e.jpg" dev="dm-3" ino=402794756 scontext=system_u:system_r:emby.process:s0:c151,c900 tcontext=system_u:object_r:user_home_t:s0 tclass=file permissive=0
+----
+
+I've included ellipses above for readability, but we can echo this out and pipe it to `audit2allow` to get our missing policies.  If you're looking closely, you can see this was through multiple runs/tests/sets of Enforcing/Permissive.  
+
+
+[source]
+----
+# echo "type=AVC msg=audit(1584409148.449:6830): avc:  denied  { rename } for  pid=30491 comm="ffmpeg" name="efb3d448b3d239bb5d35b5c3e50f5b95.m3u8.tmp" dev="dm-3" ino=211919424 scontext=system_u:system_r:emby.process:s0:c151,c900 tcontext=system_u:object_r:user_home_t:s0 tclass=file permissive=1
+> type=AVC msg=audit(1584409148.449:6831): avc:  denied  { unlink } for  pid=30491 comm="ffmpeg" name="efb3d448b3d239bb5d35b5c3e50f5b95.m3u8" dev="dm-3" ino=211919422 scontext=system_u:system_r:emby.process:s0:c151,c900 tcontext=system_u:object_r:user_home_t:s0 tclass=file permissive=1
+> type=AVC msg=audit(1584421297.913:6858): avc:  denied  { setattr } for  pid=26360 comm="EmbyServer" name="f7e583d30c3b499d84bbcaef2e27785f.png" dev="dm-3" ino=402760194 scontext=system_u:system_r:emby.process:s0:c151,c900 tcontext=system_u:object_r:user_home_t:s0 tclass=file permissive=1
+> type=AVC msg=audit(1584489609.398:7126): avc:  denied  { link } for  pid=26360 comm="EmbyServer" name="embyserver.txt" dev="dm-3" ino=268987196 scontext=system_u:system_r:emby.process:s0:c151,c900 tcontext=system_u:object_r:user_home_t:s0 tclass=file permissive=0
+> type=AVC msg=audit(1584490531.808:7141): avc:  denied  { rmdir } for  pid=26360 comm="EmbyServer" name="c9497bf0c838321b8aedfe6ec0bcea18" dev="dm-3" ino=212388327 scontext=system_u:system_r:emby.process:s0:c151,c900 tcontext=system_u:object_r:user_home_t:s0 tclass=dir permissive=0
+> type=AVC msg=audit(1584490610.269:7151): avc:  denied  { create } for  pid=26360 comm="EmbyServer" name="97630" scontext=system_u:system_r:emby.process:s0:c151,c900 tcontext=system_u:object_r:user_home_t:s0 tclass=dir permissive=0
+> type=AVC msg=audit(1584490610.832:7153): avc:  denied  { setattr } for  pid=26360 comm="EmbyServer" name="dc89056c78e844de986c007f5394db8e.jpg" dev="dm-3" ino=402794756 scontext=system_u:system_r:emby.process:s0:c151,c900 tcontext=system_u:object_r:user_home_t:s0 tclass=file permissive=0" | audit2allow
+
+
+#============= emby.process ==============
+allow emby.process user_home_t:dir { create rmdir };
+
+#!!!! This avc is allowed in the current policy
+allow emby.process user_home_t:file { rename unlink };
+allow emby.process user_home_t:file { link setattr };
+----
+
+Wow we are missing a lot from that `udica` output.  Let's add it:
+
+[source]
+----
+$ cat emby.cil 
+(block emby
+    (blockinherit container)
+    (blockinherit restricted_net_container)
+    (allow process process ( capability ( chown dac_override fsetid fowner mknod net_raw setgid setuid setfcap setpcap net_bind_service sys_chroot kill audit_write ))) 
+
+    (allow process unreserved_port_t ( tcp_socket (  name_bind ))) 
+    (allow process unreserved_port_t ( udp_socket (  name_bind ))) 
+    (allow process ssdp_port_t ( udp_socket (  name_bind ))) 
+    (allow process unreserved_port_t ( tcp_socket (  name_bind ))) 
+    (allow process unreserved_port_t ( udp_socket (  name_bind ))) 
+    (allow process user_home_t ( dir ( open read getattr lock search ioctl add_name remove_name write ))) 
+    (allow process user_home_t ( file ( getattr read write append ioctl lock map open create  ))) 
+    (allow process user_home_t ( sock_file ( getattr read write append open  ))) 
+    (allow process user_home_t ( dir ( open read getattr lock search ioctl add_name remove_name write create rmdir ))) 
+    (allow process user_home_t ( file ( getattr read write append ioctl lock map open create rename unlink link setattr ))) 
+    (allow process user_home_t ( sock_file ( getattr read write append open  ))) 
+)
+----
+
+I'm certainly not an SELinux expert, but I would venture to say there is some duplication in rules in the above block, but since `udica` put them there, I'll leave them there for now.
+
+A quick diff from the udica output:
+
+[source]
+----
+$ diff emby.cil{,.orig}
+6c6
+<     (allow process unreserved_port_t ( tcp_socket (  name_bind name_connect ))) 
+---
+>     (allow process unreserved_port_t ( tcp_socket (  name_bind ))) 
+8c8
+<     (allow process ssdp_port_t ( udp_socket (  name_bind )))
+---
+>     (allow process ssdp_port_t ( udp_socket (  name_bind ))) 
+14,15c14,15
+<     (allow process user_home_t ( dir ( open read getattr lock search ioctl add_name remove_name write create rmdir ))) 
+<     (allow process user_home_t ( file ( getattr read write append ioctl lock map open create rename unlink setattr link ))) 
+---
+>     (allow process user_home_t ( dir ( open read getattr lock search ioctl add_name remove_name write ))) 
+>     (allow process user_home_t ( file ( getattr read write append ioctl lock map open create  ))) 
+----
+
+Boom! Start up and application running and streaming correctly across my network devices!!!
+
+Changing this to my needs, the startup finally becomes:
+
+[source]
+----
+podman run -d \
+--volume /home/bward/emby/config:/config \
+--volume /media-content:/media \
+-p 8096:8096 \
+-p 8920:8920 \
+-e UID=1001 \
+-e GID=1001 \
+emby/embyserver:latest
+----
+
+Actually, I don't really need a listener published on port 1900.  I just found that there was an SELlinux denial on attempting to bind to 1900 during startup, but watching the application at work shows that it doesn't continually use that port, nor does service seem to be affected by limiting that port from being published or unblocked by the firewall. A little testing shows I don't really need the UDP ports published.  It was just convenient to have them in the `podman` command to generate the needed SELinux policies by `udica`.
+
+Alternatively from using `udica`, I could have just monitored the AVC denials in the audit log and captured from there.  As it turns out, I personally think monitoring the audit logs should be the way to go, at least until we have better ways of capturing policies from `udica`.  This is probably what application developers, who are concerned about creating valid SELinux policies, have already been doing for years.  
+
+
+I should also note the required firewall changes.
+
+ $ sudo firewall-cmd --add-port=8096/tcp
+ $ sudo firewall-cmd --add-port=8096/tcp --permanent
+
+The final part of this bit on securing this application will be getting a certificate to match my hostname and enabling HTTPS, so that I can appropriately externalize this service.  That's the easy part. 
+
+=== Further Documentation
+
+- https://developers.redhat.com/blog/2019/08/14/best-practices-for-running-buildah-in-a-container/[Best practices for running Buildah in a container]
+
+- https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html-single/using_selinux/index[RHEL 8: Using SELinux]
+
+- https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html-single/selinux_users_and_administrators_guide/index[RHEL 7: SELinux User's and Administrator's Guide]
+
+- https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html-single/security-enhanced_linux/index[RHEL 6: Security-Enhanced Linux]
+
+- https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html-single/building_running_and_managing_containers/index[RHEL 8: Building, running, and managing containers]
+

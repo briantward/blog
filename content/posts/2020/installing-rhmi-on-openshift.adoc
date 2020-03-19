@@ -1,0 +1,10 @@
+---
+title: Installing RHMI on OpenShift
+date: 2020-03-15
+categories: ["openshift","rhmi"]
+tags: ["integration"]
+language: en
+slug: installing-rhmi-on-openshift
+---
+
+== Installing RHMI on OpenShift

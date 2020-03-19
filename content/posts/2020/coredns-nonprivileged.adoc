@@ -189,3 +189,16 @@ $ oc run -i -t dns-tools-test --image=172.30.1.1:5000/myproject/dns-tools --rm b
 
 This should be run within the same namespace/project. If you are using the network-policy plugin with default configuration, you will not need to create any special rules for accessing the service URL.  
 
+=== Links
+
+- https://quay.io/repository/openshift/origin-coredns?tab=tags
+- https://access.redhat.com/containers/?tab=images#/registry.access.redhat.com/openshift4/ose-cluster-dns-operator
+- https://en.wikipedia.org/wiki/SOA_record
+- https://en.wikipedia.org/wiki/Zone_file
+- https://docs.openshift.com/container-platform/4.1/networking/dns-operator.html#nw-dns-view_dns-operator
+- https://github.com/coredns/coredns
+- https://github.com/openshift/coredns
+- https://github.com/openshift/coredns/blob/master/Dockerfile.openshift
+- https://blog.openshift.com/using-coredns-openshift-ansible-installer-deploy-local-multi-node-cluster/
+- https://access.redhat.com/solutions/4765861[Corefile for adding additional nameserver to CoreDNS configuration file in OCP 4]
+
