@@ -35,7 +35,7 @@ Run the node-exporter container.
 
 Don't forget your firewall or selinux.
 
-=== Create the external Enpoint, Service, and ServiceMonitor objects for the node exporter
+=== Create the external Endpoint, Service, and ServiceMonitor objects for the node exporter
 
 [source]
 ----
@@ -48,7 +48,7 @@ metadata:
     k8s-app: gluster-node-metrics-endpoint.yaml
 subsets:
 - addresses:
-  - iip: 192.168.1.20
+  - ip: 192.168.1.20
   ports:
   - name: metrics
     port: 9100
