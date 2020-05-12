@@ -1,6 +1,6 @@
 ---
 title: oc Tips
-date: 2018-08-11
+date: 2020-03-23
 categories: ["tips"]
 tags: ["oc"]
 language: en
@@ -16,3 +16,8 @@ slug: oc-tips
 Show all resources... and I mean ALL:
 
  $ kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get --show-kind --ignore-not-found -n openshift-monitoring
+
+Show docker images on node for each node found in pods listing. (Thanks Todd Penn)
+
+ $ for node in $(oc get pods -o jsonpath='{range .items[*].spec}{.nodeName}{" "}{end}'); do echo $node; ssh $node "docker images";done
+

@@ -1,0 +1,41 @@
+---
+title: New Relic on OpenShift 4
+date: 2020-05-06
+categories: ["openshift","security"]
+tags: ["New Relic"]
+language: en
+slug: new-relic-on-openshift-4
+---
+
+== New Relic on OpenShift 4
+
+Follow the instructions on New Relic's website: 
+
+https://docs.newrelic.com/docs/integrations/kubernetes-integration/link-your-applications/link-your-applications-kubernetes
+
+Modified here.  There is no need for adding the `MutatingAdmissionWebhook` as this is already enabled by default in OCP 4, so skip that section. 
+
+
+
+. Download the YAML file:
+
+ curl -O http://download.newrelic.com/infrastructure_agent/integrations/kubernetes/k8s-metadata-injection-latest.yaml 
+
+. Replace YOUR_CLUSTER_NAME with the name of your cluster in the YAML file.
+
+. Apply the YAML file to your Kubernetes cluster:
+
+  oc apply -f k8s-metadata-injection-latest.yaml
+
+Now fix their issue with failed TLS authentication:
+
+[source]
+----
+LATEST_CSR_SIGNER=$(oc get secret -n openshift-kube-controller-manager --sort-by=.metadata.creationTimestamp | grep csr-signer | tail -1)
+echo $LATEST_CSR_SIGNER
+LATEST_CSR_CA=$(oc get secret $LATEST_CSR_SIGNER -n openshift-kube-controller-manager  -o jsonpath='{.data.tls\.crt}')
+echo $LATEST_CSR_CA
+oc patch mutatingwebhookconfiguration newrelic-metadata-injection-cfg -n default -p '{"webhooks":[{"name":"metadata-injection.newrelic.com","clientConfig":{"caBundle":"'${LATEST_CSR_CA}'"}}]}'
+----
+
+Note that this may need to be updated as `csr-signer` rotates.  
