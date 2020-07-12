@@ -9,6 +9,8 @@ slug: installing-ocs-on-ibm-cloud-bare-metal
 
 == Installing OpenShift Container Storage on IBM Cloud Bare Metal RedHat Openshift Kubernetes Service (ROKS)
 
+This feature set, deploying OCS on Bare Metal, has not gone GA yet and is still a work in progress.footnote:[https://github.com/openshift/ocs-operator/issues/454#issuecomment-604522767]  It should be coming soon, but the main issue is that there is no documentation specific to this deployment scenario and the kubelet home directory on IBM ROKS is not the same as Red Hat OpenShift Container Platform.  
+
 === Install OpenShift Container Storage Operator.
 
 . Do https://access.redhat.com/documentation/en-us/red_hat_openshift_container_storage/4.3/html-single/deploying_openshift_container_storage/index#installing-rhocs-on-existing-rhocp[Section 1.1.1] in the official documentation.
@@ -395,7 +397,7 @@ local-pv-a0747d99                          1787Gi     RWO            Delete     
 
 === Create an OCS StorageCluster
 
-. Edit the system:node ClusterRole
+. Edit the system:node ClusterRole. Alternatively, you can set `enable-controller-attach-detach` to true on the kubelet.footnote:[https://github.com/openshift/ocs-operator/issues/453#issuecomment-619918779]
 +
 [source]
 ----
@@ -473,3 +475,10 @@ This error indicates you did not edit the clusterrole correctly, or did not do i
 ----
 May 11 10:56:11 kube-bqjdgjof0jub1eqc7830-cluster0-storage-00000d76 kubelet.service: E0511 10:56:11.498116   15432 nestedpendingoperations.go:20] Operation for "\"kubernetes.io/csi/openshift-storage.rbd.csi.ceph.com^0001-0011-openshift-storage-0000000000000002-abcba85c-9395-11ea-abcf-52f7713ae97\"" failed. No retries permitted until 2020-05-11 10:58:13.498080928 -0500 CDT m=+599603.370303765 (durationBeforeRetry 2m2s). Error: "AttahVolume.Attach failed for volume \"pvc-3797850b-b025-46fc-a177-242b86483049\" (UniqueName: \"kubernetes.io/csi/openshift-storage.rbd.csi.ceph.com^001-0011-openshift-storage-0000000000000002-abcba85c-9395-11ea-abcf-52f77713ae97\") from node \"10.194.150.204\" : kubernetes.io/csi: attacher.Attch failed: volumeattachments.storage.k8s.io is forbidden: User \"system:node:10.194.150.204\" cannot create resource \"volumeattachments\" in API roup \"storage.k8s.io\" at the cluster scope: can only get individual resources of this type"
 ----
+
+=== Notes and References
+
+- https://github.com/rook/rook/pull/5032
+- https://github.com/openshift/ocs-operator/issues/453
+- https://github.com/rook/rook/issues/3923#issuecomment-534037026
+- https://github.com/rook/rook/pull/3927
