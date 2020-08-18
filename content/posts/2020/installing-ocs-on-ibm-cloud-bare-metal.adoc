@@ -455,6 +455,13 @@ Notice that our storage size matches the PV size, which is not one of the prescr
  $ oc edit ds csi-cephfsplugin
  $ oc edit ds csi-rbdplugin
 ----
++
+Automated this would look like:+
+[source]
+----
+ $ oc get ds csi-rbdplugin -o yaml | sed 's/var\/lib\/kubelet/var\/data\/kubelet/g' | oc apply -f -
+ $ oc get ds csi-cephfsplugin -o yaml | sed 's/var\/lib\/kubelet/var\/data\/kubelet/g' | oc apply -f -
+----
 
 === Debugging
 

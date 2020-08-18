@@ -32,3 +32,9 @@ Otherise this works fine:
 Or 
 
  $ docker rmi $(docker images -a -q)
+
+Remove exited containers:
+
+ $ docker rm $(docker ps -a -f status=exited -q)
+
+ $ docker system prune -a

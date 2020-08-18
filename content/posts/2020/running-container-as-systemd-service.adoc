@@ -1,0 +1,34 @@
+---
+title: Running a Container as a Systemd Service on Fedora and RHEL
+date: 2020-08-17
+categories: ["container","fedora","rhel"]
+tags: ["8","rhel8","fedora","podman"]
+language: en
+slug: running-container-as-systemd-service
+---
+
+== Running a Container as a Systemd Service on Fedora and RHEL
+
+There is some great documentation on this:
+
+- https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/building_running_and_managing_containers/using-systemd-with-containers_building-running-and-managing-containers[Chapter 7. Running containers as systemd services with Podman]
+- https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/building_running_and_managing_containers/container-command-line-reference_building-running-and-managing-containers#generate_a_systemd_unit_file[Chapter 8. Container command-line reference: 8.1.10. Generate a systemd unit file]
+
+Even better there is a man page:
+
+ $ man podman-generate-systemd
+
+The basic command looks like this, to be run on an existing running container:
+
+ $ podman generate systemd --name myfedora > ~/.config/systemd/user
+
+Then stop the same container so we can test the systemd startup:
+
+ $ podman stop --name myfedora
+ $ systemctl --user start container-myfedora.service
+
+To enable this at bootup:
+
+ $ systemctl --user enable container-myfedora.service
+
+
