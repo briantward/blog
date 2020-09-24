@@ -21,3 +21,6 @@ Show docker images on node for each node found in pods listing. (Thanks Todd Pen
 
  $ for node in $(oc get pods -o jsonpath='{range .items[*].spec}{.nodeName}{" "}{end}'); do echo $node; ssh $node "docker images";done
 
+Capture total CPU usage in cluster:
+
+ $ oc describe nodes | grep -P "cpu:\s*\d$" | awk '{s+=$2} END {print s}'
