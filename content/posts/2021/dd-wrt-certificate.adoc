@@ -1,0 +1,75 @@
+---
+title: DD-WRT Custom Certificate
+date: 2021-01-09
+categories: ["tips","linux"]
+tags: ["bash,"router","dd-wrt""]
+language: en
+slug: dd-wrt-certificate
+---
+
+== DD-WRT Custom Certificate
+
+(Tested on R7000)
+
+Install acme.sh or other system for creating certs every 30 days from Let's Encrypt. 
+
+On your router, plug in an empty USB drive, FAT or ext3/4 formatted.
+
+In the router GUI go to `Services > USB`:
+
+Select the following
+
+- Core USB Support: Enabled
+- USB Storage Support: Enabled
+- Automatic Drive Mount: Enabled
+
+Click Apply Settings
+
+If the device does not show up in the UI, reboot the router (mine required rebooting).
+
+Note the partition mount location in the UI on the Services > USB page.
+
+On your other host, Acme.sh will install to your crontab to check regularly for expiring certificates and renew them.  If you have a renewed certificate, you can just copy it over automatically using another script.  Do this manually the first time.  You will have to enable SSH access to your router.
+
+In the Router GUI go to `Services > Services`:
+
+Secure Shell  
+- SSHd enabled
+- (Add your authorized public key)
+
+On your host where you provisioned and installed acme.sh, add the following script to your crontab, noting any changes you need for your installation:
+
+[source]
+----
+#!/bin/bash
+if find "/home/bward/.acme.sh/mydd-wrt.mydomain.com/mydd-wrt.mydomain.com.cer" -mmin -2880
+then
+  scp /home/bward/.acme.sh/mydd-wrt.mydomain.com/*.* root@192.168.1.1:/mnt/sda1
+fi
+----
+
+Copy the files directly the first time. You could be picky and just copy the exact three files you will need.
+
+scp /home/bward/.acme.sh/mydd-wrt.mydomain.com/*.* root@192.168.1.1:/mnt/sda1
+
+Now SSH to the dd-wrt router and execute
+
+[source]
+----
+stopservice httpd
+mount -o bind /tmp/mnt/sda1/mydd-wrt.mydomain.com.key /etc/key.pem
+mount -o bind /tmp/mnt/sda1/fullchain.cer /etc/host.pem
+mount -o bind /tmp/mnt/sda1/mydd-wrt.mydomain.com.cer /etc/cert.pem
+startservice httpd
+----
+
+Go to `Administration > Commands` and add the exact commands above.
+
+Click `Save Startup` and this will apply again on reboot.
+
+N.B. Accessing via IP address will still prompt you with a security alert because Let's Encrypt does not allow you to provision certificates with an IP address inside the hostname or SAN fields of the certificate.  If you want those features, you'll have to find and pay a vendor.  
+
+
+https://wiki.dd-wrt.com/wiki/index.php/USB_storage
+
+https://forum.dd-wrt.com/phpBB2/viewtopic.php?p=977574&sid=1713543781b2ea0e6aca1daa8d418331

@@ -1,0 +1,100 @@
+---
+title: Image Video Metadata Part 2
+date: 2021-01-09
+categories: ["tips"]
+tags: ["image","jpeg","video","mov"," mp4","metadata"]
+language: en
+slug: image-video-metadata-p2
+---
+
+== Image Video Metadata Tips
+
+Recently I found a bunch of photos that had the wrong capture date, a result of the device not having the correct date when the photos were captured.  This is pretty annoying, but can be fixed with a nice perl utility called `exiftool`.  Apple and a bunch of other photo tools these days use these dates for sorting your photos.  So if something isn't right, it can be pretty confusing/noticeable. 
+
+Dates before running the script:
+
+[source]
+----
+$ exiftool WardFamilyPhotos-003.jpg -a -G -s| grep -i date 
+[File]          FileModifyDate                  : 2021:01:09 09:28:53-05:00
+[File]          FileAccessDate                  : 2021:01:09 09:28:51-05:00
+[File]          FileInodeChangeDate             : 2021:01:09 18:58:40-05:00
+[EXIF]          ModifyDate                      : 2020:11:30 07:43:35
+[EXIF]          DateTimeOriginal                : 2014:01:06 14:46:39
+[EXIF]          CreateDate                      : 2014:01:06 14:46:39
+[IPTC]          DateCreated                     : 2014:01:06
+[IPTC]          DigitalCreationDate             : 2014:01:06
+[ICC_Profile]   ProfileDateTime                 : 1998:02:09 06:49:00
+[XMP]           CreateDate                      : 2014:01:06 14:46:39.08
+[XMP]           ModifyDate                      : 2020:11:30 07:43:35-05:00
+[XMP]           MetadataDate                    : 2020:11:30 07:43:35-05:00
+[XMP]           DateCreated                     : 2014:01:06 14:46:39.08
+[Composite]     SubSecCreateDate                : 2014:01:06 14:46:39.08
+[Composite]     SubSecDateTimeOriginal          : 2014:01:06 14:46:39.08
+[Composite]     SubSecModifyDate                : 2020:11:30 07:43:35-05:00
+[Composite]     DateTimeCreated                 : 2014:01:06 14:46:39
+[Composite]     DigitalCreationDateTime         : 2014:01:06 14:46:39
+----
+
+The `-s` gives us the actual field name we need to modify (see the script) instead of some pretty print formatted message.
+The `-G` gives us the group classification we need to modify.
+The `-a` gives us any duplicate fields.
+
+`man exiftool` is a BIG manual.  It appears to be everything you need, if you have time.  
+
+Dates after running the script:
+
+[source]
+----
+$ exiftool WardFamilyPhotos-003.jpg -a -G -s| grep -i date 
+[File]          FileModifyDate                  : 2021:01:09 12:32:31-05:00
+[File]          FileAccessDate                  : 2021:01:09 12:32:31-05:00
+[File]          FileInodeChangeDate             : 2021:01:09 12:32:31-05:00
+[EXIF]          ModifyDate                      : 2020:11:30 07:43:35
+[EXIF]          DateTimeOriginal                : 2020:11:25 14:46:39
+[EXIF]          CreateDate                      : 2020:11:25 14:46:39
+[IPTC]          DateCreated                     : 2020:11:25
+[IPTC]          DigitalCreationDate             : 2020:11:25
+[ICC_Profile]   ProfileDateTime                 : 1998:02:09 06:49:00
+[XMP]           DateCreated                     : 2020:11:25 14:46:39.08
+[XMP]           CreateDate                      : 2020:11:25 14:46:39.08
+[XMP]           MetadataDate                    : 2020:11:30 07:43:35-05:00
+[XMP]           ModifyDate                      : 2020:11:30 07:43:35-05:00
+[Composite]     SubSecCreateDate                : 2020:11:25 14:46:39.08
+[Composite]     SubSecDateTimeOriginal          : 2020:11:25 14:46:39.08
+[Composite]     SubSecModifyDate                : 2020:11:30 07:43:35-05:00
+[Composite]     DateTimeCreated                 : 2020:11:25 14:46:39
+[Composite]     DigitalCreationDateTime         : 2020:11:25 14:46:39
+----
+
+[source]
+----
+#!/bin/bash
+
+# drop this script in the folder of images where you need to update the image date
+# requires exiftool (duh...)
+# slow as it opens and writes the file many times, but could be optimized perhaps...
+
+NEW_DATE=2020:11:25
+
+echo "new date is...: "$NEW_DATE
+
+for file in $(ls *.jpg)
+do
+  existing_time=$(exiftool -EXIF:DateTimeOriginal $file | grep -o -P "\d.*$" | cut -c11-19)
+  #echo "replacing existing EXIF values with: "$NEW_DATE$existing_time
+  exiftool -q -overwrite_original -EXIF:DateTimeOriginal="$NEW_DATE$existing_time" $file &> /dev/null
+  exiftool -q -overwrite_original -EXIF:CreateDate="$NEW_DATE$existing_time" $file &> /dev/null
+  #echo "replacing existing IPTC values with: "$NEW_DATE
+  exiftool -q -overwrite_original -IPTC:DigitalCreationDate="$NEW_DATE" $file &> /dev/null
+  exiftool -overwrite_original -IPTC:DateCreated="$NEW_DATE" $file &> /dev/null
+  existing_time_s=$(exiftool -XMP:CreateDate $file | grep -o -P "\d.*$" | cut -c11-22)
+  #echo "replacing existing XMP values with: "$NEW_DATE$existing_time_s
+  exiftool -q -overwrite_original -XMP:CreateDate="$NEW_DATE$existing_time_s" $file &> /dev/null
+  exiftool -q -overwrite_original -XMP:DateCreated="$NEW_DATE$existing_time_s" $file &> /dev/null
+done;
+----
+
+https://github.com/briantward/bash-hacks/blob/master/replace-image-date.sh
+
+

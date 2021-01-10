@@ -38,3 +38,7 @@ Remove exited containers:
  $ docker rm $(docker ps -a -f status=exited -q)
 
  $ docker system prune -a
+
+JQ with a dot in the key name:
+
+ $ cat router-certs-default.json | jq .data[\"tls.crt\"] -r | base64 -d | openssl x509 -in - -text -noout

@@ -75,7 +75,7 @@ Since my user was created by IdM (free-ipa), I needed to add these values manual
 
 
  $ sudo echo "bward:100000:65536" >> /etc/subuid
- $ sudo echo "bward:100000:65536" >> /etc/subuid
+ $ sudo echo "bward:100000:65536" >> /etc/subgid
 
 Now I can pull the image correctly.
 
