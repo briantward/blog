@@ -2,7 +2,7 @@
 title: DD-WRT Custom Certificate
 date: 2021-01-09
 categories: ["tips","linux"]
-tags: ["bash,"router","dd-wrt""]
+tags: ["bash","router","dd-wrt"]
 language: en
 slug: dd-wrt-certificate
 ---

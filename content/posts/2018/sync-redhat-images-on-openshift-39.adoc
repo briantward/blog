@@ -10,7 +10,7 @@ slug: sync-redhat-images-on-openshift-39
 == Sync Red Hat Container Images on OpenShift 3.9
 
 If using the default Advanced Installer, and setting the flag to deploy openshift_install_examples footnote:[https://github.com/openshift/openshift-ansible/blob/master/inventory/hosts.example#L89] in your cluster (or using the default which is true), you will find that 
-the ansible installer adds some nice stuff to your local registry from the openshift_examples footnoteref:[openshift_examples_repo, https://github.com/openshift/openshift-ansible/tree/master/roles/openshift_examples] folder.
+the ansible installer adds some nice stuff to your local registry from the openshift_examples footnote:openshift_examples_repo[https://github.com/openshift/openshift-ansible/tree/master/roles/openshift_examples] folder.
 
 [source]
 $ oc get is -n openshift
@@ -103,7 +103,7 @@ Note that the default setting does not have the scheduled import on!
 
 Second, you need to update all your imagestreams to automatically update.  Note that the openshift_examples installed
 by the Advanced Installer only install into your OpenShift environment ONCE.  They never get updated.  If new templates
-arrive in subsequent updates, they do get added, and some get removed. But they never get updated! footnoteref:[openshift_examples_repo] Here is how to change that.
+arrive in subsequent updates, they do get added, and some get removed. But they never get updated! footnote:openshift_examples_repo[https://github.com/openshift/openshift-ansible/tree/master/roles/openshift_examples] Here is how to change that.
 
 
 To perform this operation on all imagestreams in the ``openshift`` namespace:

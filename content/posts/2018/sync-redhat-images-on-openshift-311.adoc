@@ -22,7 +22,7 @@ You can also see that the Container Catalog tracks the latest release history an
 image:/images/sync-redhat-images/ruby-list-details.png[]
 
 When using the OpenShift Ansible (Advanced) Installer, you will find that by default
-the installer adds some useful ImageStreams to your ``openshift`` project namespace from the openshift_examples footnoteref:[openshift_examples_repo, https://github.com/openshift/openshift-ansible/tree/master/roles/openshift_examples] folder.  Examples include the all-powerful Apache httpd, a useful Jenkins CI/CD server, a few scripting languages, and a few databases among many others.  These are just a sampling of what you can find in the full Red Hat Container Catalog online footnote:[https://access.redhat.com/containers/].
+the installer adds some useful ImageStreams to your ``openshift`` project namespace from the openshift_examples footnote:openshift_examples_repo[https://github.com/openshift/openshift-ansible/tree/master/roles/openshift_examples] folder.  Examples include the all-powerful Apache httpd, a useful Jenkins CI/CD server, a few scripting languages, and a few databases among many others.  These are just a sampling of what you can find in the full Red Hat Container Catalog online footnote:[https://access.redhat.com/containers/].
 
 When you deploy the Red Hat Container Registry, either as a part of your OpenShift cluster or external to it, you will get a web console where you can take a peak at what ImageStreams and container images you have in your registry.  Here is an example of the corresponding Ruby ImageStream.  Note that it has several tags for different major.minor versions.  As a part of normal security and development, any one of those major.minor versions might get a new release at any time.  You can see when each was last updated in the far right column.  
 
@@ -101,7 +101,7 @@ On OpenShift > = 3.10:
 
 Second, you need to update all your ImageStreams to automatically update.  Note that the openshift_examples installed
 by the OpenShift Ansible Installer only install into your OpenShift environment ONCE.  They never get updated.  If new templates
-arrive in subsequent updates, they do get added, and some get removed. But they never get updated! footnoteref:[openshift_examples_repo] Here is how to change that.
+arrive in subsequent updates, they do get added, and some get removed. But they never get updated!  footnote:openshift_examples_repo[https://github.com/openshift/openshift-ansible/tree/master/roles/openshift_examples] Here is how to change that.
 
 To perform this operation on all ImageStreams in the ``openshift`` namespace using a CLI json editor tool, ``jq``:
 
