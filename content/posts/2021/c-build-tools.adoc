@@ -1,0 +1,18 @@
+---
+title: C Build Tools
+date: 2021-01-01
+categories: ["tips","linux"]
+tags: ["build tools"]
+language: en
+slug: c-build-tools
+---
+
+== C Build Tools
+
+- autotools
+- bmake
+- cmake
+- llvm
+
+
+

@@ -1,0 +1,69 @@
+---
+title: Convert VHS to Digital
+date: 2021-02-20
+categories: ["tips","linux"]
+tags: ["vhs","mkv","avi","openshot","video","mov"," mp4","obs studio"]
+language: en
+slug: convert-vhs-to-digital
+---
+
+== Convert VHS to Digital
+
+OBS Studio is great for recording but limited in modification of video.  OpenShot is great for then editing that video and trimming out pieces.
+
+On Fedora 32, I can capture video and audio with the USB Easy Capture device and "Audio Capture Device" on OBS set to ALSA. The audio settings provide a sync offset that doesn't work well and is hard to tell if it is working right unless you fully record and capture. 
+
+As of the OSB builds for Fedora 33, the audio device set to pulseaudio works much better.
+
+When audio is out of sync these could be possible causes: +
+- CPU possibly failing to capture audio and video at same time (try a different, faster computer)
+- disable audio on the monitor? (not tried this much yet, might be interfering with CPU execution cycles) 
+- VCR sucks (try a different VCR)
+- VHS cassette sucks (try a different cassette)
+
+Improvements to make: +
+- New CPU / GPU / VCR
+
+OBS Studio can capture at the quality level I intend to keep.  I had not tweaked this setting, and it's default was 2500 Kbps.
+
+My settings: +
+NTSC 720 x 486 +
+720x486 = 40x27 = 1.4815 +
+29.97 Fps +
+825 Kbps +
+ 
+NTSC VHS is roughly 333x480 = 0.6937 +
+486x320 = ? +
+640 x 480 = 1.333 VGA NTSC* +
+320x240 = QVGA ? +
+
+
+720x480 is recommended by many online but this was not a selection in the OpenShot software +
+Half D1 (352x576 PAL or 352x480 NTSC) with 2-pass vbr and an average bitrate around 3000 kbit/s seems OK for VHS source. +
+https://forum.videohelp.com/threads/75289-Hi8-VHS-to-DVD-which-bitrate-do-you-recommend
+
+"The effective resolution of a VHS recording is about 320x240, interlaced, 50 Hz (PAL) or 60 Hz (NTSC), so set your OBS canvas size to this."
+
+https://obsproject.com/forum/threads/best-settings-for-recording-vhs.80171/
+
+"The horizontal resolution is 240 lines per picture height, or about 320 lines across a scan line, and the vertical resolution (the number of scan lines) is the same as the respective analog TV standard (576 for PAL or 486 for NTSC; usually, somewhat fewer scan lines are actually visible due to overscan)."
+
+https://en.wikipedia.org/wiki/VHS
+
+resulting pick is 480x320 based on scaling the screen size provided by the VCR input through the EasyCAP device.  I'm left with very small black edges on all four sides, that look like they can be removed with "overscan".  The ratio of 480x320 is equivalent to 3:2 (or 1.5), not 4:3 (or 1.33) found in typical NTSC TV.  But if I change the Sample Aspect Ratio to 8:9 while keeping the Display Aspect Ration at 4:3 then I achieve the same pixels "squished" into a 4:3 screen ( (4/3) * (8/9) = 1.5).
+
+TODO: try the above suggestion, size down the capture resolution but increase the bitrate
+
+OBS has settings for deinterlacing!! Use them!
+
+Right Click on Video Source Object > Deinterlacing > Blend , Top Field First
+
+Settings > Output (advanced) > type standard, format mkv, bitrate 825 Kbps
+
+Video Capture Settings in Video Source Object (gear button or Properties) +
+Input: Composite +
+Video Format: YUYV 4:2:2 +
+Video Standard: NTSC +
+Color Range: Default +
+
+Settings > Video > Downscale Filter: Bicubic

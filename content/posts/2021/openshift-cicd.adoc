@@ -1,0 +1,41 @@
+---
+title: OpenShift CICD
+date: 2021-02-20
+categories: ["openshift","linux"]
+tags: ["cicd","continuous","integration","deploy"]
+language: en
+slug: openshift-cicd
+---
+
+== OpenShift CICD
+
+- environment changes that progress through the environments
+  - application performance configuration
+  - feature flags
+- environment changes specific to an environment
+  - connection endpoint URLs
+  - image name/tag
+  
+Scenario 0:
+ First project deployment
+ - scaffold code, base image, build pipeline
+ 
+  
+Scenario 1:
+ Application is rebuilt from source code, base image doesn't change: 
+ - build binary image
+ - rebuild container image from same base image
+ - tag with new version numbering scheme
+ - (dev) picks up new version and deploys immediately
+ 
+Scenario 2:
+ Application doesn't change, base image doesn't change, deployment configuration changes: 
+ 
+Scenario 3:
+ Application changes, base image doesn't change, deployment configuration changes: 
+ - commit changes to app, triggers build image
+ - resulting image gets tagged
+ - commit changes to deployment configuration repo
+ - resulting kickoff deployment sync pipeline (CI) to push this through environments
+ 
+ 

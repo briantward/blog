@@ -1,0 +1,26 @@
+---
+title: Pulseaudio Customization
+date: 2021-02-20
+categories: ["tips","linux"]
+tags: ["audio"]
+language: en
+slug: audio-fix
+---
+
+== Pulseaudio Customization
+
+Stop pulseaudio from messing around with your sound levels while in the middle of conference calls on Fedora 31.  This may or may not work as intended.  I have not done this on my latest Fedora 32 and have not felt the need for it.  Previous releases I have had the problem of pulseaudio changing my microphone input levels dynamically.  People on the other end claim that my input volume would go down drastically.
+
+
+ $ sudo vim /usr/share/pulseaudio/alsa-mixer/paths/analog-input-mic.conf
+
+[source]
+----
+[Element Capture]
+switch = mute
+#volume = merge
+volume = 40
+
+
+pulseaudio -k
+----

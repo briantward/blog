@@ -1,0 +1,15 @@
+---
+title: OpenShift Time and Date
+date: 2021-02-20
+categories: ["openshift","linux"]
+tags: ["time","date"]
+language: en
+slug: openshift4-timedate
+---
+
+== OpenShift Time and Date
+
+OCP timedate
+
+- https://access.redhat.com/solutions/2567961
+- https://access.redhat.com/solutions/4994241

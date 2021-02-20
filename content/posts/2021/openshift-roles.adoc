@@ -1,0 +1,18 @@
+---
+title: OpenShift RBAC
+date: 2021-02-20
+categories: ["openshift","linux"]
+tags: ["rbac"]
+language: en
+slug: openshift-roles
+---
+
+== OpenShift RBAC
+
+ oc auth can-i VERB OBJECT
+ oc adm policy who-can VERB OBJECT
+
+ oc get clusterrole basic-user -o yaml
+ oc get clusterrole cluster-admin -o yaml
+
+https://www.openshift.com/blog/fine-grained-iam-roles-for-openshift-applications

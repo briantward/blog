@@ -1,0 +1,43 @@
+---
+title: Debugging Ephemeral Disk in Kubernetes
+date: 2021-02-20
+categories: ["kubernetes","linux"]
+tags: ["debugging"]
+language: en
+slug: ephemeral
+---
+
+== Debugging Ephemeral Disk in Kubernetes
+
+Useful links on discussing ephemeral storage in OpenShift
+
+- https://docs.openshift.com/container-platform/3.11/dev_guide/application_ephemeral_storage_sizing.html
+- https://docs.openshift.com/container-platform/3.11/architecture/additional_concepts/ephemeral-storage.html
+- https://docs.openshift.com/container-platform/3.11/scaling_performance/optimizing_ephemeral_storage.html
+- https://docs.openshift.com/container-platform/3.11/install_config/configuring_ephemeral.html
+
+TODO: Add links for same in OpenShift 4
+
+
+Funky log messages... when ephemeral limit request is not set, the system logs it as 0.
+
+ 1:32:26 PM    Warning    Evicted     The node was low on resource: ephemeral-storage. Container mycontainer was using 215481700Ki, which exceeds its request of 0.
+
+
+message: 'The node was low on resource: ephemeral-storage. ' Some of these variables were not in use... (old notes as of 2021)
+
+[source]
+----
+    // nodeLowMessageFmt is the message for evictions due to resource pressure.
+    nodeLowMessageFmt = "The node was low on resource: %v. "
+    // nodeConditionMessageFmt is the message for evictions due to resource pressure.                                <--------------------NOT IN USE
+    nodeConditionMessageFmt = "The node had condition: %v. "                                          <--------------------NOT IN USE
+    // containerMessageFmt provides additional information for containers exceeding requests
+    containerMessageFmt = "Container %s was using %s, which exceeds its request of %s. "
+    // containerEphemeralStorageMessageFmt provides additional information for containers which have exceeded their ES limit                                <--------------------NOT IN USE
+    containerEphemeralStorageMessageFmt = "Container %s exceeded its local ephemeral storage limit %q. "                                <--------------------NOT IN USE
+    // podEphemeralStorageMessageFmt provides additional information for pods which have exceeded their ES limit
+    podEphemeralStorageMessageFmt = "Pod ephemeral local storage usage exceeds the total limit of containers %s. "
+    // emptyDirMessageFmt provides additional information for empty-dir volumes which have exceeded their size limit
+    emptyDirMessageFmt = "Usage of EmptyDir volume %q exceeds the limit %q. "
+----

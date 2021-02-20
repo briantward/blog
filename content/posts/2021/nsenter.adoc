@@ -1,0 +1,53 @@
+---
+title: Using nsenter strace and tcpdump in OpenShift containers
+date: 2021-02-20
+categories: ["openshift","kubernetes","linux"]
+tags: ["nsenter","strace","tcpdump","wireshark"]
+language: en
+slug: nsenter
+---
+
+== Using nsenter strace and tcpdump in OpenShift containers
+
+- nsenter
+- strace
+- tcpdump
+- oc rsyn -h
+
+capture a tcpdump of the base ethernet interface on the node:
+
+ # tcpdump -s 0 -n -i ethX -w /tmp/$(hostname)-$(date +"%Y-%m-%d-%H-%M-%S").pcap
+
+find the container ID from the container engine:
+
+ # docker ps 
+ # cid=<docker-container-id>
+
+find the runtime PID from inspecting the container itself:
+
+ # docker inspect --format "{{ .State.Pid }}" "$cid"
+
+now try a tcpdump on just the ethernet device of the pod, using `nsenter` to execute inside the container's namespace:
+
+ # nsenter -n -t $(sudo docker inspect --format "{{ .State.Pid }}" "$cid") tcpdump -s 0 -n -i eth0 -w /tmp/$(hostname)-$(date +"%Y-%m-%d-%H-%M-%S").pcap
+
+now try an strace on running `oc rsync` from inside that pod to another pod (probably need kubeconfig set up in the first pod):
+
+ # nsenter -n -t $(sudo docker inspect --format "{{ .State.Pid }}" "$cid") strace -CfqqrtttTwy -o master2podlocal.profile.strace oc rsync /tmp/testrun/ mypod:/tmp
+
+now try an strace copying the file from one location to another 
+
+ # nsenter -n -t $(sudo docker inspect --format "{{ .State.Pid }}" "$cid") strace -CfqqrtttTwy -o $(hostname)mypod.strace cp /fromdir /todir
+
+other commands
+
+ # strace -CfqqrtttTwy -o cp.strace cp ....
+
+ # strace -CfqqrtttTwy -o $(hostname)mypod.strace -p $(sudo docker inspect --format "{{ .State.Pid }}" "$cid")
+
+ # nsenter -n -t $(sudo docker inspect --format "{{ .State.Pid }}" "$cid") 
+
+ # strace -CfqqrtttTwy -o /tmp/$(hostname)-$(date +"%Y-%m-%d-%H-%M-%S").strace 
+
+
+

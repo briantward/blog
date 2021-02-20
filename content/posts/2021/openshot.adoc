@@ -1,0 +1,175 @@
+---
+title: Running OpenShot in a Container
+date: 2021-02-01    
+categories: ["tips"]
+tags: ["openshot","video","mov"," mp4","podman"]
+language: en
+slug: openshot-in-a-container
+---
+
+== Running OpenShot in a Container
+
+=== Transform with OpenShot
+
+OpenShot on Fedora 33 doesn't work.  Well, not for me at least.  Basically it installs fine and runs fine, but the moment I attempt to import a file, boom! Core Dump generated.  
+
+using the following packages:
+
+[source]
+----
+$ rpm -qa openshot ffmpeg 
+ffmpeg-4.3.1-16.fc33.x86_64
+openshot-2.5.1-4.fc33.noarch
+----
+
+I found the following when searching around for similar issues:
+
+https://devtalk.blender.org/t/ffmpeg-issues-with-2-83-3/14559
+
+Which took me to this in the blender code:
+
+----
+  /* Certain versions of FFmpeg have a bug in libswscale which ends up in crash
+   * when destination buffer is not properly aligned. For example, this happens
+   * in FFmpeg 4.3.1. It got fixed later on, but for compatibility reasons is
+   * still best to avoid crash.
+----
+
+https://developer.blender.org/rB6778ef4dcc6e8d92e3b2ec9b9ecaf1e54e5bf7b5
+
+And further addressed here and supposedly fixed in 4.3:
+
+https://trac.ffmpeg.org/ticket/8747
+
+dnf doesn't like the idea of downgrading to f32 versions because there are a ton of dependency changes there!  We could otherwise see there are a lot of possibilities going up or down in version: https://rpmfind.net/linux/rpm2html/search.php?query=ffmpeg but I don't feel like breaking my distribution's dependencies.  
+
+The direct download at https://www.openshot.org/download/ didn't help either as it is an AppImage that uses my underlying system libraries and bombs out worse than before:
+
+[source]
+----
+$ ./OpenShot-v2.5.1-x86_64.AppImage 
+Loaded modules from current directory: /tmp/.mount_LL5Meh/usr/bin
+         app:INFO ------------------------------------------------
+         app:INFO             Mon Feb  1 22:38:17 2021            
+         app:INFO               Starting new session              
+         app:ERROR OpenShotApp::Import Error: /lib64/libpango-1.0.so.0: undefined symbol: g_list_model_get_n_items
+Traceback (most recent call last):
+  File "/home/gitlab-runner/builds/5cd61c66/0/OpenShot/openshot-qt/openshot.py", line 18, in swig_import_helper
+  File "/usr/lib/python3.4/imp.py", line 297, in find_module
+ImportError: No module named '_openshot'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.4/dist-packages/cx_Freeze-4.3.4-py3.4-linux-x86_64.egg/cx_Freeze/initscripts/Console.py", line 27, in <module>
+  File "openshot_qt/launch.py", line 104, in <module>
+    main()
+  File "openshot_qt/launch.py", line 97, in main
+    app = OpenShotApp(argv)
+  File "/tmp/.mount_LL5Meh/usr/bin/classes/app.py", line 72, in __init__
+    from classes import settings, project_data, updates, language, ui_util, logger_libopenshot
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 2284, in _handle_fromlist
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 321, in _call_with_frames_removed
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 2237, in _find_and_load
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 2226, in _find_and_load_unlocked
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 1200, in _load_unlocked
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 1129, in _exec
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 1471, in exec_module
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 321, in _call_with_frames_removed
+  File "/tmp/.mount_LL5Meh/usr/bin/classes/logger_libopenshot.py", line 31, in <module>
+    import openshot
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 2237, in _find_and_load
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 2226, in _find_and_load_unlocked
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 1191, in _load_unlocked
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 1161, in _load_backward_compatible
+  File "/home/gitlab-runner/builds/5cd61c66/0/OpenShot/openshot-qt/openshot.py", line 28, in <module>
+  File "/home/gitlab-runner/builds/5cd61c66/0/OpenShot/openshot-qt/openshot.py", line 20, in swig_import_helper
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 2237, in _find_and_load
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 2226, in _find_and_load_unlocked
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 1191, in _load_unlocked
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 1161, in _load_backward_compatible
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 539, in _check_name_wrapper
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 1715, in load_module
+  File "/usr/lib/python3.4/importlib/_bootstrap.py", line 321, in _call_with_frames_removed
+ImportError: /lib64/libpango-1.0.so.0: undefined symbol: g_list_model_get_n_items
+         app:INFO             OpenShot's session ended            
+         app:INFO             Mon Feb  1 22:38:22 2021            
+         app:INFO ================================================
+----
+
+Similar to 
+
+https://askubuntu.com/questions/1303623/cannot-run-openshot-libpango-1-0-so-0-undefined-symbol-g-list-model-get-n-ite
+
+https://www.gitmemory.com/issue/OpenShot/openshot-qt/3821/725780806
+
+So there seem to be two options:
+
+flatpak
+
+https://flatpak.org/setup/Fedora/
+
+flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+https://flathub.org/apps/details/org.openshot.OpenShot
+
+flatpak install flathub org.openshot.OpenShot
+
+[source]
+----
+$ flatpak install flathub org.openshot.OpenShot
+Looking for matches…
+Required runtime for org.openshot.OpenShot/x86_64/stable (runtime/org.kde.Platform/x86_64/5.15) found in remote flathub
+Do you want to install it? [Y/n]: Y
+
+org.openshot.OpenShot permissions:
+    ipc      network     pulseaudio     x11     dri     file access [1]     dbus access [2]
+
+    [1] host, xdg-config/kdeglobals:ro
+    [2] com.canonical.AppMenu.Registrar, org.freedesktop.Flatpak
+
+
+        ID                                                               Branch              Op             Remote              Download
+ 1.     org.freedesktop.Platform.GL.default                              20.08               i              flathub              < 95.9 MB
+ 2.     org.freedesktop.Platform.VAAPI.Intel                             20.08               i              flathub              < 11.2 MB
+ 3.     org.freedesktop.Platform.openh264                                2.0                 i              flathub               < 1.5 MB
+ 4.     org.kde.KStyle.Adwaita                                           5.15                i              flathub               < 6.2 MB
+ 5.     org.kde.Platform.Locale                                          5.15                i              flathub             < 341.5 MB (partial)
+ 6.     org.kde.PlatformTheme.QGnomePlatform                             5.15                i              flathub               < 4.9 MB
+ 7.     org.kde.PlatformTheme.QtSNI                                      5.15                i              flathub               < 1.3 MB
+ 8.     org.kde.WaylandDecoration.QGnomePlatform-decoration              5.15                i              flathub               < 4.8 MB
+ 9.     org.kde.Platform                                                 5.15                i              flathub             < 385.8 MB
+10.     org.openshot.OpenShot                                            stable              i              flathub             < 103.6 MB
+
+Proceed with these changes to the system installation? [Y/n]: 
+----
+
+containerize this bitch
+
+https://blog.jessfraz.com/post/docker-containers-on-the-desktop/
+
+https://github.com/jessfraz/dockerfiles/blob/master/chrome/stable/Dockerfile
+
+(don't use the seccomp files provided by Jesse)
+
+did not need this one - https://forums.docker.com/t/start-a-gui-application-as-root-in-a-ubuntu-container/17069
+
+headful chrome https://www.mattzeunert.com/2018/07/21/running-headful-chrome-on-ubuntu-server.html
+
+Custom Profile
+
+https://cdn.openshot.org/static/files/user-guide/profiles.html
+
+details - https://github.com/OpenShot/openshot-qt/issues/3427
+
+Distorted edge
+
+https://askubuntu.com/questions/1047583/openshot-distorted-line-on-the-right-side-after-exporting
+
+https://github.com/OpenShot/openshot-qt/issues/2053
+
+
+Curious about different distribution packages? 
+
+https://askubuntu.com/questions/866511/what-are-the-differences-between-snaps-appimage-flatpak-and-others
+
