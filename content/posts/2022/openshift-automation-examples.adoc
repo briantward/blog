@@ -1,0 +1,18 @@
+---
+title: OpenShift Automtion Examples
+date: 2022-04-15
+categories: ["kubernetes","openshift"]
+tags: ["automation"]
+language: en
+slug: openshift-automation-examples
+---
+
+== OpenShift Automtion Examples
+
+
+- https://github.com/sa-ne/openshift4-rhv-upi
+- https://github.com/sushilsuresh/ocp4-ansible-roles
+- https://github.com/redhat-cop/infra-ansible
+- https://github.com/openshift/openshift-ansible
+- https://github.com/openshift/installer/tree/master/upi/
+

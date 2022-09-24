@@ -1,0 +1,14 @@
+---
+title: OpenShift Monitoring Blogs
+date: 2022-04-15
+categories: ["openshift"]
+tags: ["monitoring"]
+language: en
+slug: openshift-monitoring-blogs
+---
+
+== OpenShift Monitoring Blogs
+
+- https://cloud.redhat.com/blog/monitoring-infrastructure-openshift-4.x-using-zabbix-operator
+- https://cloud.redhat.com/blog/how-to-monitoring-openshift-4.x-with-zabbix-using-prometheus-part-2
+- https://cloud.redhat.com/blog/prometheus-alerts-on-openshift

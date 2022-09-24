@@ -1,0 +1,129 @@
+---
+title: External to Internal IdP Initiated Login on RH-SSO
+date: 2022-02-03
+categories: ["sso","linux"]
+tags: ["keycloak"]
+language: en
+slug: external-to-internal-idp
+---
+
+== External to Internal IdP Initiated Login on RH-SSO
+
+=== Install the Internal RH-SSO
+
+Download the zip install package from access.redhat.com.
+
+- rh-sso-7.5.0-server-dist.zip
+- rh-sso-7.5.0-saml-eap7-adapter-dist.zip
+
+Unzip an installation for your internal IdP.
+
+ $ unzip rh-sso-7.5.0-server-dist.zip -d internal
+
+Install client adapter for SAML example application on internal RH-SSO 
+
+ $ unzip -o rh-sso-7.5.0-saml-eap7-adapter-dist.zip -d internal/rh-sso-7.5/
+ $ ./internal/rh-sso-7.5/bin/jboss-cli.sh --file=./internal/rh-sso-7.5/bin/adapter-elytron-install-saml-offline.cli
+
+Install client adapter for OIDC example application on internal RH-SSO
+
+ $ unzip -o rh-sso-7.5.0-eap7-adapter-dist.zip -d internal/rh-sso-7.5/
+ $ ./internal/rh-sso-7.5/bin/jboss-cli.sh --file=./internal/rh-sso-7.5/bin/adapter-elytron-install-offline.cli
+
+Create admin user
+
+ $ ./internal/rh-sso-7.5/bin/add-user-keycloak.sh -u admin -p admin123 
+
+Run Server on default ports
+
+ $ ./internal/rh-sso-7.5/bin/standalone.sh
+
+Download Keycloak project for example applications.
+
+ $ git clone https://github.com/keycloak/keycloak.git
+
+Checkout clostest version match of Keycloak to RH-SSO 7.5
+
+ $ cd keycloak && git checkout 15.0.2
+
+Import POC example realm with user, role, and client adapter
+
+ $ ../internal/rh-sso-7.5/bin/kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user admin --password admin123
+ $ ../internal/rh-sso-7.5/bin/kcadm.sh create realms -f ./examples/saml/testsaml.json
+ $ cd examples/saml 
+ $ mvn clean install wildfly:deploy
+
+Login to the web application at `http://localhost:8080/employee-sig/` with user `bburke` and password `password`.
+
+
+=== Install the External RH-SSO
+
+Unzip an installation for your external IdP.
+
+ $ unzip rh-sso-7.5.0-server-dist.zip -d external
+
+Update /etc/hosts for a hostname for your external IdP to separate your cookie sessions (RH-SSO will be confused if your hostname is the same even if you are running on different ports).
+
+ $ head -1 /etc/hosts
+ 127.0.0.1 localhost localhost.localdomain rh-sso-external
+
+Create admin user
+
+ $ ./external/rh-sso-7.5/bin/add-user-keycloak.sh -u admin -p admin123 
+
+Run Server on different ports
+
+ $ ./external/rh-sso-7.5/bin/standalone.sh -Djboss.socket.binding.port-offset=1000
+
+
+Create a realm on the external IdP.
+
+ $ ../external/rh-sso-7.5/bin/kcadm.sh config credentials --server http://rh-sso-external:9080/auth --realm master --user admin --password admin123
+ $ ./external/rh-sso-7.5/bin/kcadm.sh create realms -s realm=external-idp-realm -s enabled=true 
+
+-a http://rh-sso-external:9080/auth/admin
+
+=== Install Federated Broker
+
+Create a custom Authentication flow for first broker login to skip the typical user profile check
+
+ $ ./internal/rh-sso-7.5/bin/kcadm.sh create authentication/flows -r saml-demo -i -f broker-login-flow.json
+
+Grab the IDP metadata from the external RH-SSO SAML descriptor URL
+
+ $ ./get_idp_metadata.sh --output external-metadata.json external-provider-url.json
+
+Merge the IDP metadata into the IDP configuration for RH-SSO
+
+ $ jq '.config = input' rh-sso-external-idp.json external-metadata.json > rh-sso-external-idp-merged.json
+
+Install federated IDP configuration in internal RH-SSO 
+
+ $ ./internal/rh-sso-7.5/bin/kcadm.sh create identity-provider/instances -r saml-demo -i -f rh-sso-external-idp-merged.json
+
+
+== Install client adapter for internal RH-SSO in the external RH-SSO
+
+Get metadata from a remote server endpoint
+
+ $ ./get_sp_metadata.sh --output internal-client.json
+
+Or get metadata from a file
+
+
+Merge the metadata into a client object for the RH-SSO API.
+
+ $ jq '.attributes = input' internal-client-on-external.json internal-client.json > internal-client-on-external-merged.json
+
+Update the attributes with a few required changes and additions.
+
+
+https://access.redhat.com/documentation/en-us/red_hat_single_sign-on/7.5/html-single/securing_applications_and_services_guide/index#jboss_adapter_installation
+
+https://access.redhat.com/documentation/en-us/red_hat_single_sign-on/7.5/html-single/server_administration_guide/index
+
+https://access.redhat.com/documentation/en-us/red_hat_single_sign-on/7.5/html-single/server_administration_guide/index#identity_broker_saml_sp_descriptor
+
+https://access.redhat.com/documentation/en-us/red_hat_single_sign-on/7.5/html-single/server_administration_guide/index#assembly-exporting-importing_server_administration_guide
+
+https://access.redhat.com/documentation/en-us/red_hat_single_sign-on/7.5/html-single/server_installation_and_configuration_guide/index#crossdc-mode

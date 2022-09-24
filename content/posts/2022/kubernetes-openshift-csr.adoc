@@ -1,0 +1,64 @@
+---
+title: kubernetes-openshift-csr
+date: 2022-04-15
+categories: ["kubernetes","openshift"]
+tags: ["csr"]
+language: en
+slug: kubernetes-openshift-csr
+---
+
+== Kubernetes and OpenShift Certificate Signing Requests
+
+Types of CSRs 
+
+https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/
+
+- kubernetes.io/kube-apiserver-client: signs certificates that will be honored as client certificates by the API server. Never auto-approved by kube-controller-manager.
+- kubernetes.io/kube-apiserver-client-kubelet: signs client certificates that will be honored as client certificates by the API server. May be auto-approved by kube-controller-manager.
+- kubernetes.io/kubelet-serving: signs serving certificates that are honored as a valid kubelet serving certificate by the API server, but has no other guarantees. Never auto-approved by kube-controller-manager.
+- kubernetes.io/legacy-unknown: has no guarantees for trust at all. Some third-party distributions of Kubernetes may honor client certificates signed by it. The stable CertificateSigningRequest API (version certificates.k8s.io/v1 and later) does not allow to set the signerName as kubernetes.io/legacy-unknown. Never auto-approved by kube-controller-manager.
+
+In order to reduce the number of old CertificateSigningRequest resources left in a cluster, a garbage collection controller runs periodically. The garbage collection removes CertificateSigningRequests that have not changed state for some duration:
+
+    Approved requests: automatically deleted after 1 hour
+    Denied requests: automatically deleted after 1 hour
+    Pending requests: automatically deleted after 1 hour
+    
+
+Quick approval commands:
+
+ for i in `oc get csr --no-headers | grep -i pending |  awk '{ print $1 }'`; do oc adm certificate approve $i; done
+
+ oc get csr -o name | xargs oc adm certificate approve
+
+
+Possible alerts to consider
+
+1. a daily alert that would show all certs that will expire in the next  7,15,30 days ( e.g. the *.apps wildcard cert, self-signed kubelet serving cert )
+2. another alert which would show if the CSR is in  "pending" state for a "threshold" value of time
+
+ count_over_time(ALERTS{alertname!~"Watchdog|AlertmanagerReceiversNotConfigured|KubeAPILatencyHigh", alertstate="pending"}[2h])
+
+ count_over_time(ALERTS{alertname!~"Watchdog|AlertmanagerReceiversNotConfigured|KubeAPILatencyHigh"}[2h])
+
+ increase(kubelet_server_expiration_renew_errors[5m]) > 0
+
+
+kubelet retries cert request every 30 seconds 
+
+machine approver -- openshift-cluster-machine-approver
+
+kube-controller-manager -- openshift-kube-controller-manager
+
+
+
+According to https://github.com/openshift/insights-operator/blob/master/docs/gathered-data.md#certificatesigningrequests and the alert KubeClientCertificateExpiration under the default prom rules, it appears to only fire events on API server expiration. The KubeClientCertificateExpiration rules only notify at 1.5 hr and 1 hr before expiry.
+
+ 
+because of line https://github.com/openshift/cluster-machine-approver/blob/release-4.6/csr_check.go#L147 we are looking only at kubelet serving certificate.
+
+To work correctly, it must be able to dial in a successful TLS connection.  This means the certificate must be renewed before expiration.  
+
+https://github.com/golang/go/blob/master/src/crypto/tls/handshake_client_test.go#L2137-L2175
+
+https://github.com/vchintal/ocp4-auto-approve-csr/blob/master/startup.sh

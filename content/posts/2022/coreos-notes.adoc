@@ -1,0 +1,15 @@
+---
+title: CoreOS Notes
+date: 2022-04-15
+categories: ["coreos"]
+tags: ["ostree"]
+language: en
+slug: coreos-notes
+---
+
+== CoreOS Notes
+
+ findmnt --real
+
+ sudo rpm-ostree install emacs
+

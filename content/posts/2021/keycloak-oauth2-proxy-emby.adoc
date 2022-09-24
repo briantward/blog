@@ -1,0 +1,52 @@
+---
+title: Keycloak and oauth2-proxy
+date: 2021-04-15
+categories: ["containers","linux"]
+tags: ["sso","security","proxy"]
+language: en
+slug: scc
+---
+
+== Keycloak and oauth2-proxy
+
+Using the Keycloak Docker image:
+
+https://hub.docker.com/r/jboss/keycloak/
+
+To run Keycloak:
+
+  podman run -e KEYCLOAK_USER=admin -e KEYCLOAK_PASSWORD=admin -p 8443:8443 --volume /home/bward/keycloak/certs:/etc/x509/https --volume /home/bward/keycloak/data:/opt/jboss/keycloak/standalone/data jboss/keycloak
+
+
+To increase the debug/trace loglevel, use `KEYCLOAK_LOGLEVEL=ALL`
+
+  podman run -e KEYCLOAK_LOGLEVEL=ALL -e KEYCLOAK_USER=admin -e KEYCLOAK_PASSWORD=admin -p 8443:8443 --volume /home/bward/keycloak/certs:/etc/x509/https --volume /home/bward/keycloak/data:/opt/jboss/keycloak/standalone/data jboss/keycloak
+
+To run the oauth2-proxy 
+
+  podman run --volume /home/bward/oauth-proxy-my-app/oauth2-proxy.cfg:/etc/oauth2-proxy.cfg --volume /home/bward/oauth-proxy-my-app/certs:/etc/x509 -p 4180:4180 oauth2-proxy/oauth2-proxy:latest --config=/etc/oauth2-proxy.cfg
+
+Oauth2-proxy has very little information in logging.  To debug it, I built and ran
+
+  podman run --security-opt seccomp=unconfined --volume /home/bward/oauth-proxy-my-app/oauth2-proxy.cfg:/etc/oauth2-proxy.cfg --volume /home/bward/oauth-proxy-my-app/certs:/etc/x509 -p 4180:4180 -p 4080:4080 oauth2-proxy-debug:latest --config=/etc/oauth2-proxy.cfg
+
+
+
+Debugging golang:
+
+ - https://github.com/go-delve/delve/blob/master/Documentation/usage/dlv.md
+
+ - https://mikemadisonweb.github.io/2018/06/14/go-remote-debug/
+
+Docs
+
+ - https://oauth2-proxy.github.io/oauth2-proxy/docs/
+
+ - https://github.com/oauth2-proxy/oauth2-proxy/blob/master/Dockerfile
+
+TODO:
+
+ - Go back and ensure all SSL configs on both keycloak, oauth2-proxy, and app
+
+ - fix backchannel logout by setting trust store -- why does it need this here if the rest works fine?? probably because the server is now sending a request, instead of just responses during the login sequence
+
