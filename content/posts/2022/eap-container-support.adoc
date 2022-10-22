@@ -1,0 +1,28 @@
+---
+title: Red Hat Support on JBoss EAP in Containers
+date: 2022-09-24
+categories: ["red hat","linux"]
+tags: ["support"]
+language: en
+slug: eap-container-support
+---
+
+== Red Hat Support on JBoss EAP in Containers
+
+- https://access.redhat.com/support/policy/updates/jboss_notes[Red Hat JBoss Middleware Product Update and Support Policy]
+
+- https://access.redhat.com/support/policy/update_policies[Life Cycle and Update Policies]
+
+- https://access.redhat.com/support/policy/updates/openshift[Red Hat OpenShift Container Platform Life Cycle Policy]
+
+- https://access.redhat.com/articles/2026253[Red Hat JBoss Enterprise Application Platform (EAP) 7 Supported Configurations]
+
+- https://access.redhat.com/articles/4292501[Support Guidelines for Red Hat Middleware Products Deployed in 3rd-party Environments]
+
+- https://access.redhat.com/solutions/1495513[Support for Red Hat JBoss Middleware Containers]
+
+- https://access.redhat.com/articles/2726611[Red Hat Container Support Policy]
+
+- https://access.redhat.com/solutions/5007361[Are JBoss EAP images supported outside OpenShift?]
+
+- https://access.redhat.com/solutions/3213211[How are JBoss Products supported when used in container images?]
