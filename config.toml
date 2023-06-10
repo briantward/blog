@@ -30,18 +30,3 @@ title = "Everyday Linux"
   section = ["HTML", "RSS"]
   taxonomy = ["HTML", "RSS"]
   taxonomyTerm = ["HTML"]
-[[menu.pages]]
-  name = "Projects"
-  weight = -100
-  identifier = "projects"
-  url = "/projects/"
-[[menu.pages]]
-  name = "Publications"
-  weight = -90
-  identifier = "publications"
-  url = "/publications/"
-[[menu.pages]]
-  name = "Photos"
-  weight = -80
-  identifier = "photos"
-  url = "/photos/"
