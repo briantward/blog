@@ -1,0 +1,17 @@
+---
+title: Update Win10 to Win11 VM
+date: 2023-04-22
+categories: ["windows"]
+tags: [""]
+language: en
+slug: update-win10-to-win11-vm
+---
+
+== Update Win10 to Win11 VM
+
+Because I do need to use Microsoft Windows from time to time.
+
+migrating to TPM and UEFI on windows VM for windows 11 prep
+
+https://www.maketecheasier.com/convert-legacy-bios-uefi-windows10/
+

@@ -1,6 +1,6 @@
 ---
 title: bash Tips
-date: 2020-02-01
+date: 2022-06-10
 categories: ["tips","linux"]
 tags: ["bash"]
 language: en
@@ -42,3 +42,7 @@ Remove exited containers:
 JQ with a dot in the key name:
 
  $ cat router-certs-default.json | jq .data[\"tls.crt\"] -r | base64 -d | openssl x509 -in - -text -noout
+
+Test a port with a telnet connection (useful if you don't have netcat or telnet)
+
+ $ curl -v telnet://<ServerIP>:Port

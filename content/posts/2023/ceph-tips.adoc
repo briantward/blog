@@ -1,0 +1,63 @@
+---
+title: Ceph Tips (mostly from ODF)
+date: 2023-04-22
+categories: ["ceph"]
+tags: ["ceph","odf"]
+language: en
+slug: ceph-tips
+---
+
+== Ceph Tips (mostly from ODF)
+
+Example must-gather (be sure to use current version)
+
+ $ oc adm must-gather --image=registry.redhat.io/ocs4/ocs-must-gather-rhel8:v4.7 --dest-dir=must-gather
+
+TODO: add ODF version
+
+Running commands from the node
+
+----
+ceph -c /var/lib/rook/openshift-storage/openshift-storage.config health
+ceph -c /var/lib/rook/openshift-storage/openshift-storage.config -s
+ceph -c /var/lib/rook/openshift-storage/openshift-storage.config df
+----
+
+Use the tools pod:
+
+ $ oc patch OCSInitialization ocsinit -n openshift-storage --type json --patch '[{ "op": "replace", "path": "/spec/enableCephTools", "value": true }]'
+ $ TOOLS_POD=$(oc get pods -n openshift-storage -l app=rook-ceph-tools -o name)
+ $ oc rsh -n openshift-storage $TOOLS_POD
+
+Or all in one:
+
+ $ oc rsh -n openshift-storage $(oc get pods -n openshift-storage -l app=rook-ceph-tools -o name)
+
+Example ad-hoc command on toolbox
+
+ $ oc rsh -n openshift-storage $(oc get pods -n openshift-storage -l app=rook-ceph-tools -o name) rbd -p ocs-storagecluster-cephblockpool info csi-vol-4b2fe3ea-24d6-11eb-a381-0a580a81021d
+
+Example useful ceph command outputs (rtm for details)
+
+ ceph -s cluster
+ ceph osd dump 
+ ceph osd tree
+
+Two ways to get the keyrings in OCP
+
+ $ for i in $(oc get secret | grep keyring | awk '{print $1}') ; do oc extract secret/$i --keys=keyring --to=-
+
+ $ oc get secret | grep keyring | awk '{print $1}' | xargs -L 1 oc extract secret/$1 --keys=keyring --to=-
+
+Pretty print PV output
+
+ $ oc get pv -o 'custom-columns=NAME:.spec.claimRef.name,PVNAME:.metadata.name,STORAGECLASS:.spec.storageClassName,VOLUMEHANDLE:.spec.csi.volumeHandle'
+
+TODO: Run this one again to find out what it does
+
+ $ oc get pv pvc-09addd15-bb02-49bf-931e-9606676c080b -o jsonpath='{.spec.csi.volumeHandle}' | cut -d '-' -f 6- | awk '{print "csi-vol-"$1}'
+
+Ok this isn't Ceph but it is ODF. I'll place it somewhere better or rename stuff.
+Get Nooba cli.
+
+ $ url -s https://api.github.com/repos/noobaa/noobaa-operator/releases/latest | grep "linux" | cut -d : -f 2,3 | tr -d \" | wget -qi - ; mv noobaa-linux-* noobaa ; chmod +x noobaa; sudo mv noobaa /usr/bin/

@@ -4,7 +4,7 @@ date: 2021-04-15
 categories: ["containers","linux"]
 tags: ["sso","security","proxy"]
 language: en
-slug: scc
+slug: keycloak-oauth2-proxy
 ---
 
 == Keycloak and oauth2-proxy

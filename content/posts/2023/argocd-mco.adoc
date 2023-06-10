@@ -1,0 +1,54 @@
+---
+title: ArgoCD MCO
+date: 2023-04-22
+categories: ["kubernetes","openshift"]
+tags: ["mco"]
+language: en
+slug: argocd-mco
+---
+
+== Provide ArgoCD permissions to control Advanced Cluster Management's Multicluster Observability RHACM MCO
+
+
+One off command:
+
+ $ oc adm policy add-cluster-role-to-user multiclusterobservabilities.observability.open-cluster-management.io-v1beta2-admin -z openshift-gitops-argocd-application-controller -n openshift-gitops
+clusterrole.rbac.authorization.k8s.io/multiclusterobservabilities.observability.open-cluster-management.io-v1beta2-admin added: "openshift-gitops-argocd-application-controller"
+
+ $ oc adm policy add-cluster-role-to-user multiclusterobservabilities.observability.open-cluster-management.io-v1beta1-admin -z openshift-gitops-argocd-application-controller -n openshift-gitops
+clusterrole.rbac.authorization.k8s.io/multiclusterobservabilities.observability.open-cluster-management.io-v1beta1-admin added: "openshift-gitops-argocd-application-controller"
+
+
+Declarative Spec for the same:
+
+----
+apiVersion: v1
+items:
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRoleBinding
+  metadata:
+    name: argocd-mcov1-admin
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: multiclusterobservabilities.observability.open-cluster-management.io-v1beta1-admin
+  subjects:
+  - kind: ServiceAccount
+    name: openshift-gitops-argocd-application-controller
+    namespace: openshift-gitops
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRoleBinding
+  metadata:
+    name: argocd-mcov2-admin
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: multiclusterobservabilities.observability.open-cluster-management.io-v1beta2-admin
+  subjects:
+  - kind: ServiceAccount
+    name: openshift-gitops-argocd-application-controller
+    namespace: openshift-gitops
+kind: List
+metadata:
+  resourceVersion: ""
+----

@@ -1,0 +1,96 @@
+---
+title: oc Tips
+date: 2023-06-10
+categories: ["tips"]
+tags: ["oc"]
+language: en
+slug: oc-tips
+---
+
+== OC Command Tips
+
+ $ oc login -u system:admin
+
+Older kubectl/oc
+
+ $ oc whoami --config=$HOME/.kube/config
+
+Current kubectl/oc
+
+ $ oc whoami --kubeconfig=$HOME/.kube/config
+ 
+Show all resources... and I mean ALL:
+
+ $ kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get --show-kind --ignore-not-found -n openshift-monitoring
+
+Show docker images on node for each node found in pods listing. (Thanks Todd Penn)
+
+ $ for node in $(oc get pods -o jsonpath='{range .items[*].spec}{.nodeName}{" "}{end}'); do echo $node; ssh $node "docker images";done
+
+Capture total CPU usage in cluster:
+
+ $ oc describe nodes | grep -P "cpu:\s*\d$" | awk '{s+=$2} END {print s}'
+
+Find AMI Id on AWS MachineSet:
+
+ $ oc --context ${context} get machineset -n openshift-machine-api -o jsonpath='{.items[0].spec.template.spec.providerSpec.value.ami.id}
+
+Find ClusterID from Install:
+
+ $ cat .openshift_install_state.json | jq -r '."*installconfig.ClusterID".InfraID'
+ $ jq -r .infraID metadata.json
+
+The default IngressController object definition doesn't acknowledge Cloud defaults created at install (e.g. privateVPN). So if you delete the default IngressController and it gets recreated, it will not know this.
+
+ $ oc get ingresscontroller default -n openshift-ingress-operator -o jsonpath="{.status.ingress[*].conditions[?(@.type=='Admitted')].status}"
+
+Move static pods to temp to shut them down (from CoreOS node):
+
+ # sudo mv /etc/kubernetes/manifests/kube-apiserver-pod.yaml /tmp
+
+Example of reusing multiple column outputs on a second command as args (pulls namespace and name from first command and uses them as args on the second)
+
+ # oc get pvc -A | grep Pending | awk '{print $1,$2}' | xargs -l bash -c 'oc get -n $0 pvc $1 -o yaml' > pvcs-pending.yaml
+
+Pull a Secret and apply it to another config. Yeah, this isn't great practice... But you could apply this more generically to pull a value from one thing and apply it to another thing.
+
+ $ eval 'oc patch argocd argocd -p '"'"'{"spec":{"server":{"route":{"tls":{"destinationCACertificate":"'$(oc get secret argocd-ca -o jsonpath='{.data.ca\.crt}' | base64 -d | awk '{printf "%s\\n",$0;}')'"}}}}}'"'"' --type=merge'
+
+Not specifically `oc` but it does essentially hit the k8s API to do something.  Update the status field of an object manually, since `oc` and `kubectl` don't officially let you do this.
+
+----
+kubectl proxy &
+
+curl -v -k -s -X PATCH -H "Accept: application/json, */*" \
+-H "Content-Type: application/merge-patch+json" \
+http://127.0.0.1:8001/apis/machine.openshift.io/v1beta1/namespaces/openshift-machine-api/machines/{failed-machine-name}/status/ \
+--data '{"status":{"phase":"Provisioned"}}
+----
+
+Ways to set the CA certificate on the kubeconfig.  This is useful in OpenShift after you change the API certificate to a custom one.
+
+ $ oc config set-cluster my-cluster --certificate-authority=<FILENAME>
+
+ $ oc config set clusters.my-cluster.certificate-authority-data $(echo "cert_data_here" | base64 -i -)
+
+ $ oc config set clusters.my-cluster.certificate-authority-data $(cat <FILENAME> | base64 -w 0)
+
+Delete all kubecontexts that are not current.  Clean up the cruft. Do this with CAUTION.
+
+ $ oc config get-contexts | awk '{print $1}' | grep -v -E "\*|CURRENT" | xargs -L 1 oc config delete-context
+
+Get the number of pods per host.  Doesn't work perfectly.
+
+ $ oc get pods --all-namespaces -o wide --no-headers | awk '{print $8}' | sort | uniq -c
+
+Reboot all nodes using SSH:
+
+----
+#!/bin/bash
+
+for ip in $(oc get nodes  -o jsonpath='{.items[*].status.addresses[?(@.type=="InternalIP")].address}')
+do
+   echo "reboot node $ip"
+   ssh -o StrictHostKeyChecking=no core@$ip sudo shutdown -r -t 3
+done
+----

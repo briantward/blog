@@ -1,0 +1,91 @@
+---
+title: Custom OpenShift 4 Ingress Router
+date: 2023-4-22
+categories: ["OpenShift"]
+tags: ["router","ingress","kubernetes"]
+language: en
+slug: custom-openshift-4-ingress-router
+---
+
+== Custom OpenShift 4 Ingress Router
+
+This solution is incomplete and is mostly scratch notes. This design is NOT supported by Red Hat! Use at your own risk.
+
+. Create custom HAProxy Template
+
+. Create a ConfigMap From the HAProxy Template (these are incomplete Ansible tasks/plays)
+
+----
+- name: slurp
+  slurp:
+    src: template file
+  register: haproxy-template
+
+- name: 
+  k8s:
+    state: present
+    namespace: openshift-ingress
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: haproxy-template
+      data:
+        haproxy-config.template: "{{ haproxy-template | b64decode }}"
+----
+
+. Create a TLS secret for the Custom Domain (use your favorite Secrets sync solution)
+
+. Create a Custom Router Deployment
+
+.. get deployment
+.. remove unneeded fields, rename object
+.. oc volume add --dry-run
+.. create deployment
+
+. Create the internal Service for the Custom Router
+
+.. get service
+.. remove unneeded fields, rename object
+.. modify fields
+.. create service
+
+. Create the LoadBalancer Service (AWS) for the Custom Router
+
+.. get service
+.. remove unneeded fields, rename object
+.. modify fields
+.. create service
+
+. Wait for the LoadBalancer Service to create an ELB
+
+----
+- name: Wait
+  k8s:
+    state: present
+    name: router-custom
+    namespace: openshift-ingress
+    api_version: v1
+    kind: Service
+  delay: 5
+  retries: 10
+  register: loadbalancer
+  until: (loadbalancer.results.status.loadBalancer is defined) and (loadbalancer.result.status.loadBalancer.ingress is defined) and (loadbalancer.result.status.loadBalancer.ingress[0].hostname is defined) and (loadbalancer.result.status.loadBalancer.ingress[0].hostname|length > 0)
+
+. Get the Generated ELB name (loadbalancer.result.status.loadBalancer.ingress[0].hostname)
+
+- name:
+  set_fact:
+    generated_elb_name: "{{ loadbalancer.result.status.loadBalancer.ingress[0].hostname }}"
+----
+
+. Create a DNSRecord in `openshift-ingress-operator` namespace for the Custom Router
+
+----
+- name:
+  k8s:
+    state: present
+    definition:
+      TODO
+----
+

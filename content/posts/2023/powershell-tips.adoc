@@ -1,0 +1,18 @@
+---
+title: PowerShell Tips
+date: 2023-05-02
+categories: ["powershell"]
+tags: ["windows"]
+language: en
+slug: PowerShell Tips
+---
+
+== PowerShell Tips
+
+Sometimes I gotta work with Windows.
+
+Convert a file to base64 to move it safely across the network.
+
+ [convert]::ToBase64String((Get-Content -path "your_file_path" -Encoding byte))
+
+https://learn.microsoft.com/en-us/previous-versions/troubleshoot/winautomation/process-development-tips/text-manipulation/convert-file-to-base64-string-format

@@ -1,0 +1,221 @@
+---
+title: MetalLB Demo
+date: 2023-04-22
+categories: ["kubernetes","openshift"]
+tags: ["metallb"]
+language: en
+slug: metallb-demo
+---
+
+== MetalLB Demo 
+
+Adapted from other people's work. This demo shows MetalLB spreading requests across two k8s clusters.
+
+https://cloud.redhat.com/blog/metallb-in-bgp-mode
+
+Update your linux OS settings to handle what is about to happen in the demo.  Otherwise things will fail.
+
+
+ $ sudo sysctl fs.inotify.max_user_watches=524288
+ $ sudo sysctl fs.inotify.max_user_instances=8192
+
+Make that permanent:
+
+----
+# echo 'fs.inotify.max_user_watches=524288
+fs.inotify.max_user_instances=8192' > /etc/sysctl.d/90-metallb-demo.conf
+----
+
+Install golang and a needed library.  This was undocumented at the time.
+
+ $ go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.7.0
+
+Add golang bin to your path.
+
+----
+# cat ~/.bash_profile 
+# .bash_profile
+
+# Get the aliases and functions
+if [ -f ~/.bashrc ]; then
+	. ~/.bashrc
+fi
+
+# User specific environment and startup programs
+export PATH=$PATH:/root/go/bin
+----
+
+
+Remove any previous environments
+
+ $ inv dev-env-cleanup --name cluster2
+ $ inv dev-env-cleanup --name cluster1
+
+Remove any previous routes added to base system
+
+ $ ip route
+ (reverse search "route add")
+ $ ip route del 192.168.10.0/24 via 172.18.0.6
+
+Check everything is gone 
+
+ $ kubectl get nodes -o wide --context kind-cluster1
+ $ kubectl get nodes -o wide --context kind-cluster2
+ $ docker ps -a
+
+Create first k8s cluster with bgp running (errors may show temporarily while components wait for other components to come up.)
+
+ $ inv dev-env --name cluster1 --protocol bgp
+
+Check first cluster nodes from docker
+
+ $ docker ps
+
+Show nodes, Show metallb pods
+
+ $ kubectl get nodes -o wide --context kind-cluster1
+ $ kubectl get pods -n metallb-system -o wide --context kind-cluster1
+
+Create the nginx deployment and service
+
+ $ kubectl apply -f dev-env/testsvc.yaml  --context kind-cluster1
+  
+Check the FRR router container, routes should show up for the service
+
+ $ docker exec frr vtysh -c "show ip bgp summary"
+ $ docker exec frr vtysh -c "show ip bgp detail"
+ $ docker exec frr ip route
+
+Add a route to base system to use the router for the k8s cluster
+
+ $ ip route add 192.168.10.0/24 via 172.18.0.4
+
+Run the test.sh script
+
+----
+$ echo '#!/bin/bash
+
+while true; do
+  curl http://192.168.10.0 --connect-timeout 1 --no-keepalive #> /dev/null 2>&1
+  echo $?
+  sleep 1
+done' > ~/test.sh
+----
+
+$ chmod +x ~/test.sh
+
+ $ ~/test.sh
+
+Change the nginx Welcome page to show cluster1
+
+ $ kubectl exec -i -t $(kubectl get pods --context kind-cluster1 -o name) --context kind-cluster1 -- /bin/bash -c "echo cluster1 > /usr/share/nginx/html/index.html"
+
+Create second k8s cluster without bgp
+
+ $ inv dev-env --name cluster2
+
+Check second cluster nodes from docker
+
+ $ docker ps
+
+Show no changes yet to router
+
+ $ docker exec frr vtysh -c "show ip bgp summary"
+ $ docker exec frr vtysh -c "show ip bgp detail"
+
+Install MetalLB manually
+
+ $ kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.7/config/manifests/metallb-frr.yaml --context kind-cluster2
+
+Wait a few seconds before applying the config...
+
+ $ kubectl apply -f dev-env/bgp/config.yaml --context kind-cluster2
+
+Create the nginx deployment and service
+
+ $ kubectl apply -f dev-env/testsvc.yaml  --context kind-cluster2
+
+Change the nginx Welcome page to show cluster1
+
+ $ kubectl exec -i -t $(kubectl get pods --context kind-cluster2 -o name) --context kind-cluster2 -- /bin/bash -c "echo cluster2 > /usr/share/nginx/html/index.html"
+
+Update the router bgpd.conf
+
+ $ vi dev-env/bgp/frr-volume/bgpd.conf
+
+Something like this:
+
+----
+...
+router bgp 64512
+ no bgp default ipv4-unicast
+ no bgp network import-check
+ neighbor 172.18.0.2 remote-as 64512
+ neighbor 172.18.0.3 remote-as 64512
+ neighbor 172.18.0.5 remote-as 64512
+ neighbor 172.18.0.6 remote-as 64512
+
+ address-family ipv4 unicast
+  neighbor 172.18.0.2 activate
+  neighbor 172.18.0.2 next-hop-self
+  neighbor 172.18.0.3 activate
+  neighbor 172.18.0.3 next-hop-self
+  neighbor 172.18.0.5 activate
+  neighbor 172.18.0.5 next-hop-self
+  neighbor 172.18.0.6 activate
+  neighbor 172.18.0.6 next-hop-self
+ exit-address-family
+...
+----
+
+Stop the router
+
+ $ docker ps | grep frr | awk '{print $1}' | xargs docker stop
+
+Run a new router
+
+ $ docker run -d --privileged --network kind --rm --ulimit core=-1 --name frr --volume /root/metallb/dev-env/bgp/frr-volume:/etc/frr frrouting/frr:v7.5.1
+
+Show changes to router
+
+ $ docker exec frr vtysh -c "show ip bgp summary"
+ $ docker exec frr vtysh -c "show ip bgp detail"
+ $ docker exec frr ip route
+  (2 new nodes show up and take the route)
+
+Remove the requested Service LoadBalancer IP
+
+ $ kubectl delete svc nginx --context kind-cluster2
+ $ kubectl get svc nginx --context kind-cluster2
+
+Show changes to router
+
+ $ docker exec frr vtysh -c "show ip bgp summary"
+ $ docker exec frr vtysh -c "show ip bgp detail"
+ $ docker exec frr ip route
+  (2 new nodes show up and take the route)
+
+Apply the Service back
+
+ $ kubectl apply -f dev-env/testsvc.yaml  --context kind-cluster2
+
+
+
+ $ kubectl get bgpadvertisement.metallb.io/empty -n metallb-system -o yaml --context kind-cluster2
+
+
+Run only on workers, not the control-plane:
+
+----
+apiVersion: metallb.io/v1beta1
+kind: BGPAdvertisement
+metadata:
+  annotations:
+  name: empty
+  namespace: metallb-system
+spec:
+  nodeSelectors:
+  - matchExpressions:
+    - {key: node-role.kubernetes.io/control-plane, operator: DoesNotExist}
+  localPref: 0
+----

@@ -1,5 +1,5 @@
 ---
-title: kubernetes-openshift-csr
+title: Kubernetes and OpenShift Certificate Signing Requests
 date: 2022-04-15
 categories: ["kubernetes","openshift"]
 tags: ["csr"]
@@ -25,7 +25,7 @@ In order to reduce the number of old CertificateSigningRequest resources left in
     Pending requests: automatically deleted after 1 hour
     
 
-Quick approval commands:
+Quick approval commands (use carefully and consider filtering more for what you need):
 
  for i in `oc get csr --no-headers | grep -i pending |  awk '{ print $1 }'`; do oc adm certificate approve $i; done
 
@@ -35,7 +35,7 @@ Quick approval commands:
 Possible alerts to consider
 
 1. a daily alert that would show all certs that will expire in the next  7,15,30 days ( e.g. the *.apps wildcard cert, self-signed kubelet serving cert )
-2. another alert which would show if the CSR is in  "pending" state for a "threshold" value of time
+2. another alert which would show if the CSR is in  "pending" state for a "threshold" value of time (e.g. below using other metrics/alerts)
 
  count_over_time(ALERTS{alertname!~"Watchdog|AlertmanagerReceiversNotConfigured|KubeAPILatencyHigh", alertstate="pending"}[2h])
 
@@ -53,12 +53,3 @@ kube-controller-manager -- openshift-kube-controller-manager
 
 
 According to https://github.com/openshift/insights-operator/blob/master/docs/gathered-data.md#certificatesigningrequests and the alert KubeClientCertificateExpiration under the default prom rules, it appears to only fire events on API server expiration. The KubeClientCertificateExpiration rules only notify at 1.5 hr and 1 hr before expiry.
-
- 
-because of line https://github.com/openshift/cluster-machine-approver/blob/release-4.6/csr_check.go#L147 we are looking only at kubelet serving certificate.
-
-To work correctly, it must be able to dial in a successful TLS connection.  This means the certificate must be renewed before expiration.  
-
-https://github.com/golang/go/blob/master/src/crypto/tls/handshake_client_test.go#L2137-L2175
-
-https://github.com/vchintal/ocp4-auto-approve-csr/blob/master/startup.sh

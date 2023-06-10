@@ -1,0 +1,38 @@
+---
+title: Helm and ArgoCD
+date: 2023-06-10
+categories: ["kubernetes","openshift"]
+tags: ["csr"]
+language: en
+slug: helm-argocd
+---
+
+== Helm and ArgoCD
+
+Feature discussions...
+
+- https://argoproj.github.io/argo-cd/user-guide/helm/
+- https://github.com/argoproj/argo-cd/issues/5826
+- https://github.com/argoproj/argo-cd/issues/2789
+
+== ArgoCD and useful GitOps blogs
+
+- https://github.com/sa-ne/acm-argocd-application
+- https://github.com/open-gitops/documents/tree/main
+- https://www.youtube.com/playlist?list=PLaR6Rq6Z4IqfGCkI28cUMbNhPhsnj4nq3
+- https://tost.dev/blog/ignore_differences_in_argocd/
+- https://argo-cd.readthedocs.io/en/stable/user-guide/compare-options/
+
+
+- https://github.com/jannfis/argo-cd/pull/17/files
+- https://github.com/argoproj/argo-cd/pull/9791
+- https://github.com/argoproj/argo-cd/issues/8683#issuecomment-1111605207
+- https://github.com/argoproj/argo-cd/issues/4487
+- https://docs.openshift.com/container-platform/4.12/cicd/gitops/argo-cd-custom-resource-properties.html
+- https://docs.openshift.com/container-platform/4.12/cicd/gitops/argo-cd-custom-resource-properties.html
+
+
+- https://developers.redhat.com/articles/2022/04/13/manage-namespaces-multitenant-clusters-argo-cd-kustomize-and-helm
+- https://cloud.redhat.com/blog/a-guide-to-going-from-zero-to-openshift-cluster-with-gitops
+- https://cloud.redhat.com/blog/configuring-openshift-cluster-with-applicationsets-using-helmkustomize-and-acm-policies
+- https://rcarrata.com/openshift/argo-and-acm/

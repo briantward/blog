@@ -1,0 +1,191 @@
+---
+title: OpenShift Capacity Planning
+date: 2023-04-22
+categories: ["kubernetes","openshift"]
+tags: ["capacity","planning"]
+language: en
+slug: openshift-capacity-planning
+---
+
+== OpenShift Capacity Planning
+
+This is a great series of articles written by Raffaele Spazzoli. 
+
+- https://cloud.redhat.com/blog/full-cluster-capacity-management-monitoring-openshift
+- https://cloud.redhat.com/blog/full-cluster-part-2-protecting-nodes
+- https://cloud.redhat.com/blog/full-cluster-part-3-capacity-management
+- https://cloud.redhat.com/blog/how-full-is-my-cluster-part-4-right-sizing-pods-with-vertical-pod-autoscaler
+- https://cloud.redhat.com/blog/how-full-is-my-cluster-part-5-a-capacity-management-dashboard
+
+
+=== Subnet Sizing for OpenShift
+
+TODO cleanup formatting here
+
+----
+#############################################################################
+
+networking.clusterNetwork[].cidr
+default: 10.128.0.0/14 (262144 addresses)
+
+networking.clusterNetwork[].hostPrefix
+default: /23 (512 addresses)
+
+networking.serviceNetwork
+default: 172.30.0.0/16 (65536 addresses)
+
+networking.machineNetwork[].cidr
+default: 10.0.0.0/16 (65536 addresses)
+
+Each k8s node is assigned a /23 subnet (hostPrefix) out of the given CIDR, allowing for 510 (2^(32 - 23) - 2) Pod IP addresses.
+Result of above: 262144/512 = 512 k8s hosts of 512 addressable pods each
+
+#############################################################################
+
+networking.clusterNetwork[].cidr (Pod Subnet)
+LAB: 10.33.192.0/20 (VLAN 1050) (4096 addresses)
+
+networking.clusterNetwork[].hostPrefix (Pod IPs per k8s host)
+LAB: /24 (256 addresses)
+
+Services Subnet: (Service Endpoint Subnet)
+LAB: 10.33.208.0/21 (VLAN 1051) (2048 addresses)
+
+networking.machineNetwork[].cidr (k8s hosts)
+LAB: 10.33.19.0/24 (VLAN 3319) (256 addresses)
+
+Result of above: 4096/256 = 16 k8s hosts of 256 addressable pods each
+
+What is the typical application profile (cpu/memory)?
+E.G. 1CPU, 2GB
+
+How many applications (service) do we expect?
+E.G. 1000 applications
+
+What is the typical pod load balancing count?
+E.G. 3 pods per service
+
+How many pods do we expect?
+E.G. 1000 applications * 3 pods per service = 3000 pods
+
+What is the typical node profile (cpu/memory)?
+4 cpu / 16GB
+
+
+How many nodes do we expect?
+E.G. 1CPU * 3000 pods / 4CPU per node = 750 nodes (based on CPU request)
+E.G. 2GB * 3000 pods / 16GB per node = 375 nodes (based on memory request)
+CPU request is higher, so 750 nodes is the need.
+
+We need 750 nodes, each hosting 4 pods. This is not an ideal architecture or load.
+We could estimate this as being inside a a.b.c.0/20 subnet (4096 addresses) with a hostprefix of /29 (8 addresses)
+Then we get 4096/8 = 512 k8s hosts of 8 addressable pods each - still doesn't work.
+This is a highly customized and restricted workload, and not flexible in the least.
+
+We could estimate this as being inside a a.b.c.0/20 subnet (4096 addresses) with a hostprefix of /27 (32 addresses)
+Then we get 4096/32 = 128 k8s hosts of 32 addressable pods each - still doesn't work since we need more nodes.
+We could bump the subnet to a /18 to get 16,384 addresses.
+Then we get 32768/32 = 1024 k8s hosts of 32 addressable pods each - we get > 750 nodes but still highly inflexible and a lot of waste here. 
+
+
+262144/512 = 512 k8s hosts of 512 addressable pods each
+
+Readjust memory limit to match the app requirements: 4cpu, 8GB ram
+
+Let's change the default size to something more reasonable:
+16 cpu / 32GB
+
+Then we get:
+1CPU * 3000 pods / 16CPU per node = 187.5 nodes each host 16 pods.
+
+Let's change the default app profile to memory intensive: 500m / 4 GB
+
+Then we get 
+0.5CPU * 3000 pods / 16 CPU per node = 93.75 nodes
+4GB * 3000 pods / 32 GB per node = 375 nodes each host 4 pods.
+
+Let's then change the default size to something more reasonable:
+12 cpu / 96GB
+
+Then we get 
+0.5CPU * 3000 pods / 12 CPU per node = 125 nodes
+4GB * 3000 pods / 96 GB per node = 125 nodes each host 24 pods.
+
+Let's reverse engineer the 512/512 subnet, that could give us:
+
+a node profile of 32 cpu / 128 GB would give us:
+32 * 512 = 16384 CPU
+128 * 512 = 65537 GB RAM
+
+an average app profile, matching the node profile in ratio (1:4) for best allocation of resources, of 1 cpu / 4GB would give us 16384 pods among 512 nodes. We would be using only 32 IPs on each node.
+
+an average app profile, matching the node profile in ratio (1:4) for best allocation of resources, of 500m cpu / 2GB would give us 32768 pods among 512 nodes. We would be using only 64 IPs on each node.
+
+an average app profile, matching the node profile in ratio (1:4) for best allocation of resources, of 250m cpu / 1GB would give us 65536 pods among 512 nodes. We would be using only 128 IPs on each node. We have still wasted 512-128 = 384 IPs on each node.
+
+If we only need 65536 IPs, we should block out a CIDR of /16 rather than /14, with /25 hostprefix to get a maximum allocation of IPs.  We would also only need a service subnet allocating 65536/3= 21846 IPS, which most closely matches a /17
+
+That results in something like this:
+
+networking.clusterNetwork[].cidr
+default: 10.128.0.0/16 (65536 addresses)
+
+networking.clusterNetwork[].hostPrefix
+default: /24 (256 addresses)
+
+networking.serviceNetwork
+default: 172.30.0.0/17 (32768 addresses)
+
+networking.machineNetwork[].cidr
+default: 10.0.0.0/16 (65536 addresses)
+
+Each k8s node is assigned a /24 subnet (hostPrefix) out of the given CIDR, allowing for 126 (2^(32 - 24) - 2) Pod IP addresses.
+Result of above: 65536/256 = 256 k8s hosts of 256 addressable pods each
+
+
+
+Questions:
+- How does this correspond to prod vs nonprod? If we start with prod sizing, then we know we may need approx N times as much resources available for N environments (dev, test, stage, sandbox, etc) of Nonprod.  However, we don't usually need the same scalability, i.e. number of pods per application/service or cpu/memory combination in each lower enviromment  
+- What is this really critical for? We could just claim these subnets internally and not care about them. We would only need to really be concerned if the subnet overlapped with an existing resource that was in another part of the greater enterprise network for a company, such as a database or other service.  That database would need a NAT'd IP address to be reachable from the pod directly to the database.
+- Unfortunately, each node must get an equal allocation of IP addresses, such that a node with less resources such as 4cpu and 16GB RAM gets the same address allocation as one with more resources such as 64cpu and 128GB RAM.  In essence, IP address allocation is inflexible itself, because clearly a node with larger resources could potentially hold more applications, especially if those applications were in the same profile as those running on the smaller node. 
+- There is planning for what we know we have, there is planning for growth (new applications/services), there is planning for scaling (more pods per service), there is planning for failover and redundancy (not designing for 100% capacity but some fraction of it)
+
+a node profile of 32 cpu / 128 GB would give us:
+32 * 512 = 16384 CPU
+128 * 512 = 65537 GB RAM
+
+an average app profile, matching the node profile in ratio (1:4) for best allocation of resources, of 62.5m cpu / 0.25GB would give us 262144 pods among 512 nodes. We would then be using the max 512 IPs per node.
+
+32/0.0625 = 512
+128/0.25 = 512
+
+Let's start with average app profile: 0.5 cpu / 2GB
+Then pick an average node profile matching in ratio for best allocation/scheduling: 16cpu / 64GB
+Then we should need only 32 IPs per node (64/2=32 or 16/0.5=32). (this is pretty inflexible, and we know there are likely to be a dozen or so pods on any given node for node functionality, so let's at least double it to 64...)
+If we only need 64 IPs..
+CPU of node / avg CPU of pod = total addresses
+hostprefix of /26 provides 64 addresses (technically 62) 
+Then pick the number of pods we need to run: 3000
+The closest subnet size for this would be 4096: /20
+And if we assume 3 pods per service, 1000 service addresses: /22
+
+That results in something like this:
+
+networking.clusterNetwork[].cidr
+default: 10.128.0.0/20 (4096 addresses)
+
+networking.clusterNetwork[].hostPrefix
+default: /26 (64 addresses)
+
+networking.serviceNetwork
+default: 172.30.0.0/22 (1024 addresses)
+
+networking.machineNetwork[].cidr
+default: 10.0.0.0/16 (65536 addresses)
+
+Each k8s node is assigned a /26 subnet (hostPrefix) out of the given CIDR, allowing for 30 (2^(32 - 26) - 2) Pod IP addresses.
+Result of above: 4096/64 = 64 k8s hosts of 64 (actual 62) addressable pods each
+
+
+(default service to pod ratio is 1:4)
+----
